@@ -2,18 +2,56 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { canAccessView, ViewKey } from '../../auth/roles';
-import { ROLE_LABEL } from '../../types';
-import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw } from 'lucide-react';
+import { ROLE_LABEL, Role } from '../../types';
+import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw, ClipboardCheck, MessageSquare } from 'lucide-react';
 import { useRecords } from '../../store/recordsStore';
 import { useToast } from '../ui/Toast';
 
-const NAV: { key: ViewKey; to: string; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
-  { key: 'integrated', to: '/integrated', label: '통합 조회', icon: LayoutDashboard },
-  { key: 'dept', to: '/dept', label: '학과내 비교과', icon: BookOpen },
-  { key: 'toeic', to: '/toeic', label: '토익 이수 현황', icon: Languages },
-  { key: 'volunteer', to: '/volunteer', label: '전공연계봉사활동', icon: HeartHandshake },
-  { key: 'stats', to: '/stats', label: '통계 화면', icon: BarChart3 },
-];
+const ICONS = {
+  integrated: LayoutDashboard,
+  submit: ClipboardCheck,
+  dept: BookOpen,
+  toeic: Languages,
+  volunteer: HeartHandshake,
+  stats: BarChart3,
+} satisfies Record<ViewKey, React.ComponentType<{ size?: number }>>;
+
+type NavItem = { key: ViewKey; to: string; label: string; icon: React.ComponentType<{ size?: number }> };
+
+const roleNav = (role: Role): NavItem[] => {
+  const item = (key: ViewKey, to: string, label: string, icon = ICONS[key]): NavItem => ({ key, to, label, icon });
+  switch (role) {
+    case 'STUDENT':
+      return [
+        item('integrated', '/integrated', '내 현황'),
+        item('submit', '/submit', '신청·제출'),
+      ];
+    case 'PROFESSOR':
+      return [
+        item('integrated', '/integrated', '배정 검토함'),
+        item('dept', '/dept', '학과내 검토'),
+        item('toeic', '/toeic', '토익 검토'),
+        item('volunteer', '/volunteer', '봉사 검토'),
+      ];
+    case 'HEAD':
+      return [
+        item('integrated', '/integrated', '전체조회'),
+        item('dept', '/dept', '학과내 최종승인'),
+        item('toeic', '/toeic', '토익 최종승인'),
+        item('volunteer', '/volunteer', '봉사 최종승인'),
+        item('stats', '/stats', '통계'),
+      ];
+    case 'STAFF':
+      return [
+        item('integrated', '/integrated', '전체조회'),
+        item('dept', '/dept', '학과내 코멘트', MessageSquare),
+        item('toeic', '/toeic', '토익 코멘트', MessageSquare),
+        item('volunteer', '/volunteer', '봉사 코멘트', MessageSquare),
+      ];
+    default:
+      return [];
+  }
+};
 
 export default function AppShell() {
   const { user, logout } = useAuth();
@@ -23,7 +61,7 @@ export default function AppShell() {
   const [open, setOpen] = useState(false);
 
   if (!user) return null;
-  const items = NAV.filter((n) => canAccessView(user.role, n.key));
+  const items = roleNav(user.role).filter((n) => canAccessView(user.role, n.key));
 
   const doLogout = () => {
     logout();
@@ -38,17 +76,16 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
-      {/* Sidebar */}
       <aside
         className={`fixed lg:static z-40 h-full w-64 bg-slate-900 flex flex-col shrink-0 transition-transform ${
-                  open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-                }`}
+          open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
         <div className="h-14 border-b border-slate-700/60 flex items-center px-6 shrink-0 gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center text-white font-bold">S</div>
-                  <h1 className="text-sm font-semibold tracking-tight text-white">삼육대 약대 <span className="text-slate-400 font-normal">/ 비교과</span></h1>
-                </div>
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center text-white font-bold">S</div>
+          <h1 className="text-sm font-semibold tracking-tight text-white">삼육대 약대 <span className="text-slate-400 font-normal">/ 비교과</span></h1>
+        </div>
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto" data-testid="role-nav">
           {items.map((item) => (
             <NavLink
               key={item.key}
@@ -56,8 +93,8 @@ export default function AppShell() {
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
                 `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                  isActive ? 'bg-blue-600 text-white font-medium' : 'text-slate-300 hover:bg-slate-800 font-normal'
-                                }`
+                  isActive ? 'bg-blue-600 text-white font-medium' : 'text-slate-300 hover:bg-slate-800 font-normal'
+                }`
               }
             >
               <item.icon size={16} />
@@ -74,7 +111,6 @@ export default function AppShell() {
 
       {open && <div className="fixed inset-0 z-30 bg-slate-900/30 lg:hidden" onClick={() => setOpen(false)} />}
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 sm:px-6 shrink-0">
           <button className="lg:hidden text-slate-600" onClick={() => setOpen(true)}><Menu size={20} /></button>

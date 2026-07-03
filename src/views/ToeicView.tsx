@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
-import { can, canView } from '../auth/roles';
+import { can, canView, canStudentEdit, isFinalApproved } from '../auth/roles';
 import { ToeicRecord } from '../types';
+import { PROFESSORS } from '../data/seed';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -10,11 +11,13 @@ import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import HistoryList from '../components/HistoryList';
 import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
-import { FieldGroup, Input } from '../components/ui/Field';
+import { FieldGroup, Input, Select } from '../components/ui/Field';
 import { useToast } from '../components/ui/Toast';
 import { Plus, Eye, Info } from 'lucide-react';
 
-const MIN_SCORE = 700; // 승인 기준 예시
+const MIN_SCORE = 700;
+const readyForFirst = (r: ToeicRecord) => r.status === '접수' || r.status === '검토중' || r.status === '반려';
+const readyForFinal = (r: ToeicRecord) => r.status === '1차 승인' || r.status === '검토중';
 
 export default function ToeicView() {
   const { state } = useRecords();
@@ -29,27 +32,30 @@ export default function ToeicView() {
   if (!user) return null;
   const current = detail ? state.toeic.find((r) => r.id === detail.id) ?? null : null;
 
+  const title = user.role === 'STUDENT' ? '토익 정보 입력' : user.role === 'PROFESSOR' ? '토익 배정 검토함' : user.role === 'STAFF' ? '토익 관리자 코멘트' : '토익 최종승인';
+
   return (
     <div>
-      <PageHeader title="토익 이수 현황" sub="TOEIC" right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 성적 입력</Button>} />
+      <PageHeader title={title} sub="TOEIC" right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 성적 입력</Button>} />
 
       <div className="flex items-start gap-2 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5">
         <Info size={14} className="mt-0.5 text-amber-500 shrink-0" />
-        <p>성적표 유효기간(응시일 +2년)과 성적 기준({MIN_SCORE}점 이상)을 확인 후 승인합니다. YBM 조회 시 진위가 불확실하면 성적표 원본을 요구할 수 있습니다.</p>
+        <p>성적표 유효기간(응시일 +2년)과 성적 기준({MIN_SCORE}점 이상)을 확인합니다. 담당교수 1차 승인 후 학과장이 최종 승인합니다.</p>
       </div>
 
       <Table>
         <THead>
-          <Th>학번</Th><Th>이름</Th><Th>응시일</Th><Th>수험번호</Th><Th>TOTAL</Th><Th>유효기간</Th><Th>진행상태</Th><Th>최종 승인일</Th><Th></Th>
+          <Th>학번</Th><Th>이름</Th><Th>담당교수</Th><Th>응시일</Th><Th>수험번호</Th><Th>TOTAL</Th><Th>유효기간</Th><Th>진행상태</Th><Th>최종 승인일</Th><Th></Th>
         </THead>
         <tbody data-testid="toeic-tbody">
           {rows.length === 0 ? (
-            <TableEmpty colSpan={9} message="입력된 토익 성적이 없습니다." />
+            <TableEmpty colSpan={10} message="입력된 토익 성적이 없습니다." />
           ) : (
             rows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                 <Td className="text-slate-600">{r.studentId}</Td>
                 <Td className="text-slate-800 font-medium">{r.name}</Td>
+                <Td className="text-slate-600">{r.professor}</Td>
                 <Td className="text-slate-600">{r.testDate}</Td>
                 <Td className="text-slate-600">{r.testNumber}</Td>
                 <Td className="text-slate-800 font-semibold">{r.totalScore}</Td>
@@ -74,9 +80,9 @@ function CreateModal({ onClose }: { onClose: () => void }) {
   const { dispatch } = useRecords();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [f, setF] = useState({ birthDate: '', testDate: '', testNumber: '', totalScore: '', issueNumber: '' });
+  const [f, setF] = useState({ birthDate: '', testDate: '', testNumber: '', totalScore: '', issueNumber: '', professor: PROFESSORS[0] });
   if (!user) return null;
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   const submit = () => {
     if (!f.testDate || !f.totalScore) { toast('응시일과 점수를 입력하세요.', 'error'); return; }
@@ -87,7 +93,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
       actor: { name: user.name, role: user.role },
       payload: {
         programType: '토익', grade: user.grade ?? '3학년', studentId: user.studentId ?? '', name: user.name,
-        year: '2026', semester: '2학기', professor: '이도현',
+        year: '2026', semester: '2학기', professor: f.professor,
         birthDate: f.birthDate, testDate, testNumber: f.testNumber, totalScore: Number(f.totalScore) || 0,
         issueNumber: f.issueNumber, validUntil, finalApprovalDate: '', adminComment: '',
       },
@@ -101,6 +107,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
       <div className="grid grid-cols-2 gap-4">
         <FieldGroup label="생년월일"><Input type="date" value={f.birthDate} onChange={set('birthDate')} /></FieldGroup>
         <FieldGroup label="응시일자"><Input type="date" value={f.testDate} onChange={set('testDate')} /></FieldGroup>
+        <FieldGroup label="담당교수"><Select value={f.professor} onChange={set('professor')}>{PROFESSORS.map((p) => <option key={p}>{p}</option>)}</Select></FieldGroup>
         <FieldGroup label="수험번호 (앞 6자리)"><Input value={f.testNumber} onChange={set('testNumber')} placeholder="482913" /></FieldGroup>
         <FieldGroup label="TOTAL 점수"><Input type="number" value={f.totalScore} onChange={set('totalScore')} placeholder="850" /></FieldGroup>
         <FieldGroup label="발급번호"><Input value={f.issueNumber} onChange={set('issueNumber')} /></FieldGroup>
@@ -119,29 +126,40 @@ function DetailModal({ record, onClose }: { record: ToeicRecord; onClose: () => 
   if (!user) return null;
   const actor = { name: user.name, role: user.role };
   const belowStd = record.totalScore < MIN_SCORE;
+  const canReject = (can(user, 'approve_first', record) && readyForFirst(record)) || (can(user, 'approve_final', record) && readyForFinal(record));
 
   return (
     <Modal open onClose={onClose} title={`토익 성적 · ${record.name}`} width="max-w-2xl">
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
         <Row k="학번" v={record.studentId} /><Row k="생년월일" v={record.birthDate || '-'} />
         <Row k="응시일자" v={record.testDate} /><Row k="수험번호" v={record.testNumber} />
+        <Row k="담당교수" v={record.professor} />
         <Row k="TOTAL" v={<span className={belowStd ? 'text-red-600 font-semibold' : 'font-semibold'}>{record.totalScore}점 {belowStd && '(기준 미달)'}</span>} />
         <Row k="발급번호" v={record.issueNumber || '-'} />
         <Row k="유효기간" v={record.validUntil} /><Row k="진행상태" v={<Badge status={record.status} />} />
       </div>
 
       <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
-        {(record.status === '접수' || record.status === '검토중') && can(user, 'approve_simple') && (
-          <Button variant="success" size="sm" data-testid="toeic-approve"
-            onClick={() => { dispatch({ type: 'APPROVE_TOEIC', id: record.id, actor }); toast('토익 성적을 승인했습니다.'); }}>
-            승인
+        {readyForFirst(record) && can(user, 'approve_first', record) && (
+          <Button variant="success" size="sm" data-testid="toeic-approve-first"
+            onClick={() => { dispatch({ type: 'APPROVE_TOEIC_PROFESSOR', id: record.id, actor }); toast('토익 성적을 1차 승인했습니다.'); }}>
+            1차 승인
           </Button>
         )}
-        {record.status === '승인' && can(user, 'cancel') && (
-          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'CANCEL_TOEIC', id: record.id, actor }); toast('승인을 취소했습니다.', 'info'); }}>승인 취소</Button>
+        {readyForFinal(record) && can(user, 'approve_final', record) && (
+          <Button variant="success" size="sm" data-testid="toeic-approve-final"
+            onClick={() => { dispatch({ type: 'APPROVE_TOEIC_FINAL_HEAD', id: record.id, actor }); toast('토익 성적을 최종 승인했습니다.'); }}>
+            최종 승인
+          </Button>
         )}
-        {(record.status === '접수' || record.status === '검토중') && can(user, 'approve_simple') && (
+        {isFinalApproved(record) && can(user, 'cancel', record) && (
+          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'CANCEL_TOEIC', id: record.id, actor }); toast('최종 승인을 취소했습니다.', 'info'); }}>최종 승인 취소</Button>
+        )}
+        {canReject && (
           <Button variant="danger" size="sm" onClick={() => setReject(true)}>반려</Button>
+        )}
+        {record.status === '반려' && canStudentEdit(user, record) && (
+          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'RESUBMIT_TOEIC', id: record.id, actor }); toast('재제출했습니다.', 'info'); }}>재제출</Button>
         )}
       </div>
 

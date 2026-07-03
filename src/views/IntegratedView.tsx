@@ -72,11 +72,11 @@ export default function IntegratedView() {
     setSemester('전체'); setType('전체'); setStatus('전체'); setLatestFirst(true);
   };
 
-  const statusOptions = ['전체', '계획서 접수', '계획서 승인', '보고서 접수', '보고서 담당승인', '최종 승인', '접수', '검토중', '승인', '반려'];
+  const statusOptions = ['전체', '계획서 접수', '계획서 승인', '보고서 접수', '보고서 담당승인', '접수', '1차 승인', '검토중', '최종 승인', '승인', '반려'];
 
   return (
     <div>
-      <PageHeader title="비교과 프로그램 이수현황" sub="통합 조회" />
+      <PageHeader title={user?.role === 'STUDENT' ? '내 현황' : user?.role === 'PROFESSOR' ? '배정 검토함' : '비교과 프로그램 이수현황'} sub={user?.role === 'STAFF' ? '전체조회 · 관리자 코멘트' : '통합 조회'} />
 
       <div className="border border-slate-200 bg-slate-50 p-5 rounded-lg mb-6 shadow-sm flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

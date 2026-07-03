@@ -6,7 +6,6 @@ import {
   DeptStatus,
   SimpleStatus,
   Role,
-  TeamMember,
   FileMeta,
   HistoryEntry,
 } from '../types';
@@ -37,7 +36,6 @@ function loadInitial(): RecordsState {
   return initialSeed();
 }
 
-// ---- 액션 ----
 export type Actor = { name: string; role: Role };
 
 export type Action =
@@ -48,15 +46,20 @@ export type Action =
   | { type: 'APPROVE_FINAL_HEAD'; id: string; actor: Actor }
   | { type: 'REJECT_DEPT'; id: string; reason: string; actor: Actor }
   | { type: 'CANCEL_DEPT'; id: string; actor: Actor }
+  | { type: 'RESUBMIT_DEPT'; id: string; actor: Actor }
   | { type: 'CREATE_TOEIC'; payload: Omit<ToeicRecord, 'id' | 'history' | 'status' | 'lastUpdate'>; actor: Actor }
-  | { type: 'APPROVE_TOEIC'; id: string; actor: Actor }
+  | { type: 'APPROVE_TOEIC_PROFESSOR'; id: string; actor: Actor }
+  | { type: 'APPROVE_TOEIC_FINAL_HEAD'; id: string; actor: Actor }
   | { type: 'REJECT_TOEIC'; id: string; reason: string; actor: Actor }
   | { type: 'CANCEL_TOEIC'; id: string; actor: Actor }
+  | { type: 'RESUBMIT_TOEIC'; id: string; actor: Actor }
   | { type: 'CREATE_VOLUNTEER'; payload: Omit<VolunteerRecord, 'id' | 'history' | 'status' | 'lastUpdate'>; actor: Actor }
   | { type: 'UPLOAD_CERT'; id: string; file: FileMeta; actor: Actor }
-  | { type: 'APPROVE_VOLUNTEER'; id: string; actor: Actor }
+  | { type: 'APPROVE_VOLUNTEER_PROFESSOR'; id: string; actor: Actor }
+  | { type: 'APPROVE_VOLUNTEER_FINAL_HEAD'; id: string; actor: Actor }
   | { type: 'REJECT_VOLUNTEER'; id: string; reason: string; actor: Actor }
   | { type: 'CANCEL_VOLUNTEER'; id: string; actor: Actor }
+  | { type: 'RESUBMIT_VOLUNTEER'; id: string; actor: Actor }
   | { type: 'SET_ADMIN_COMMENT'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; comment: string; actor: Actor }
   | { type: 'RESET' };
 
@@ -71,9 +74,6 @@ const entry = (step: string, actor: Actor, reason?: string): HistoryEntry => ({
   reason,
 });
 
-// 학과내 비교과 상태 전이표 (전진)
-
-// 취소 시 되돌아갈 직전 상태
 const DEPT_PREV: Record<DeptStatus, DeptStatus | null> = {
   '계획서 접수': null,
   '계획서 승인': '계획서 접수',
@@ -85,6 +85,7 @@ const DEPT_PREV: Record<DeptStatus, DeptStatus | null> = {
 
 let seq = 1000;
 const nextId = (prefix: string) => `${prefix}${(seq += 1)}`;
+const finalSimple = (status: SimpleStatus) => status === '최종 승인' || status === '승인';
 
 function reducer(state: RecordsState, action: Action): RecordsState {
   switch (action.type) {
@@ -106,134 +107,98 @@ function reducer(state: RecordsState, action: Action): RecordsState {
       );
     case 'SUBMIT_REPORT':
       return mutDept(state, action.id, (r) =>
-        r.status === '계획서 승인'
-          ? {
-              ...r,
-              status: '보고서 접수',
-              reportFile: action.file,
-              history: [...r.history, entry('보고서 접수', action.actor)],
-            }
+        r.status === '계획서 승인' || r.status === '반려'
+          ? { ...r, status: '보고서 접수', reportFile: action.file, history: [...r.history, entry('보고서 접수', action.actor)] }
           : r,
       );
     case 'APPROVE_REPORT_PROFESSOR':
       return mutDept(state, action.id, (r) =>
         r.status === '보고서 접수'
-          ? {
-              ...r,
-              status: '보고서 담당승인',
-              professorComment: action.comment ?? r.professorComment,
-              history: [...r.history, entry('보고서 담당승인', action.actor)],
-            }
+          ? { ...r, status: '보고서 담당승인', professorComment: action.comment ?? r.professorComment, history: [...r.history, entry('보고서 담당승인', action.actor)] }
           : r,
       );
     case 'APPROVE_FINAL_HEAD':
       return mutDept(state, action.id, (r) =>
         r.status === '보고서 담당승인'
-          ? {
-              ...r,
-              status: '최종 승인',
-              finalApprovalDate: nowDate(),
-              history: [...r.history, entry('최종 승인', action.actor)],
-            }
+          ? { ...r, status: '최종 승인', finalApprovalDate: nowDate(), history: [...r.history, entry('최종 승인', action.actor)] }
           : r,
       );
     case 'REJECT_DEPT':
-      return mutDept(state, action.id, (r) => ({
-        ...r,
-        status: '반려',
-        history: [...r.history, entry('반려', action.actor, action.reason)],
-      }));
+      return mutDept(state, action.id, (r) => ({ ...r, status: '반려', history: [...r.history, entry('반려', action.actor, action.reason)] }));
     case 'CANCEL_DEPT':
       return mutDept(state, action.id, (r) => {
+        if (r.status !== '최종 승인') return r;
         const prev = DEPT_PREV[r.status];
         if (!prev) return r;
-        return {
-          ...r,
-          status: prev,
-          finalApprovalDate: r.status === '최종 승인' ? '' : r.finalApprovalDate,
-          history: [...r.history, entry(`취소 → ${prev}`, action.actor)],
-        };
+        return { ...r, status: prev, finalApprovalDate: '', history: [...r.history, entry(`최종 승인 취소 → ${prev}`, action.actor)] };
       });
+    case 'RESUBMIT_DEPT':
+      return mutDept(state, action.id, (r) =>
+        r.status === '반려' ? { ...r, status: '계획서 접수', finalApprovalDate: '', history: [...r.history, entry('재제출', action.actor)] } : r,
+      );
 
     case 'CREATE_TOEIC': {
-      const rec: ToeicRecord = {
-        ...action.payload,
-        id: nextId('t'),
-        status: '접수',
-        lastUpdate: now(),
-        history: [entry('접수', action.actor)],
-      };
+      const rec: ToeicRecord = { ...action.payload, id: nextId('t'), status: '접수', lastUpdate: now(), history: [entry('접수', action.actor)] };
       return { ...state, toeic: [rec, ...state.toeic] };
     }
-    case 'APPROVE_TOEIC':
-      return mutToeic(state, action.id, (r) => ({
-        ...r,
-        status: '승인',
-        finalApprovalDate: nowDate(),
-        history: [...r.history, entry('승인', action.actor)],
-      }));
+    case 'APPROVE_TOEIC_PROFESSOR':
+      return mutToeic(state, action.id, (r) =>
+        r.status === '접수' || r.status === '반려' || r.status === '검토중'
+          ? { ...r, status: '1차 승인', history: [...r.history, entry('1차 승인', action.actor)] }
+          : r,
+      );
+    case 'APPROVE_TOEIC_FINAL_HEAD':
+      return mutToeic(state, action.id, (r) =>
+        r.status === '1차 승인' || r.status === '검토중'
+          ? { ...r, status: '최종 승인', finalApprovalDate: nowDate(), history: [...r.history, entry('최종 승인', action.actor)] }
+          : r,
+      );
     case 'REJECT_TOEIC':
-      return mutToeic(state, action.id, (r) => ({
-        ...r,
-        status: '반려',
-        history: [...r.history, entry('반려', action.actor, action.reason)],
-      }));
+      return mutToeic(state, action.id, (r) => ({ ...r, status: '반려', history: [...r.history, entry('반려', action.actor, action.reason)] }));
     case 'CANCEL_TOEIC':
-      return mutToeic(state, action.id, (r) => ({
-        ...r,
-        status: '접수',
-        finalApprovalDate: '',
-        history: [...r.history, entry('승인 취소', action.actor)],
-      }));
+      return mutToeic(state, action.id, (r) =>
+        finalSimple(r.status) ? { ...r, status: '1차 승인', finalApprovalDate: '', history: [...r.history, entry('최종 승인 취소', action.actor)] } : r,
+      );
+    case 'RESUBMIT_TOEIC':
+      return mutToeic(state, action.id, (r) =>
+        r.status === '반려' ? { ...r, status: '접수', finalApprovalDate: '', history: [...r.history, entry('재제출', action.actor)] } : r,
+      );
 
     case 'CREATE_VOLUNTEER': {
-      const rec: VolunteerRecord = {
-        ...action.payload,
-        id: nextId('v'),
-        status: '접수',
-        lastUpdate: now(),
-        history: [entry('접수', action.actor)],
-      };
+      const rec: VolunteerRecord = { ...action.payload, id: nextId('v'), status: '접수', lastUpdate: now(), history: [entry('접수', action.actor)] };
       return { ...state, volunteer: [rec, ...state.volunteer] };
     }
     case 'UPLOAD_CERT':
-      return mutVol(state, action.id, (r) => ({
-        ...r,
-        certFile: action.file,
-        history: [...r.history, entry('인증서 업로드', action.actor)],
-      }));
-    case 'APPROVE_VOLUNTEER':
-      return mutVol(state, action.id, (r) => ({
-        ...r,
-        status: '승인',
-        finalApprovalDate: nowDate(),
-        history: [...r.history, entry('승인', action.actor)],
-      }));
+      return mutVol(state, action.id, (r) => ({ ...r, certFile: action.file, history: [...r.history, entry('인증서 업로드', action.actor)] }));
+    case 'APPROVE_VOLUNTEER_PROFESSOR':
+      return mutVol(state, action.id, (r) =>
+        r.status === '접수' || r.status === '반려' || r.status === '검토중'
+          ? { ...r, status: '1차 승인', history: [...r.history, entry('1차 승인', action.actor)] }
+          : r,
+      );
+    case 'APPROVE_VOLUNTEER_FINAL_HEAD':
+      return mutVol(state, action.id, (r) =>
+        r.status === '1차 승인' || r.status === '검토중'
+          ? { ...r, status: '최종 승인', finalApprovalDate: nowDate(), history: [...r.history, entry('최종 승인', action.actor)] }
+          : r,
+      );
     case 'REJECT_VOLUNTEER':
-      return mutVol(state, action.id, (r) => ({
-        ...r,
-        status: '반려',
-        history: [...r.history, entry('반려', action.actor, action.reason)],
-      }));
+      return mutVol(state, action.id, (r) => ({ ...r, status: '반려', history: [...r.history, entry('반려', action.actor, action.reason)] }));
     case 'CANCEL_VOLUNTEER':
-      return mutVol(state, action.id, (r) => ({
-        ...r,
-        status: '접수',
-        finalApprovalDate: '',
-        history: [...r.history, entry('승인 취소', action.actor)],
-      }));
+      return mutVol(state, action.id, (r) =>
+        finalSimple(r.status) ? { ...r, status: '1차 승인', finalApprovalDate: '', history: [...r.history, entry('최종 승인 취소', action.actor)] } : r,
+      );
+    case 'RESUBMIT_VOLUNTEER':
+      return mutVol(state, action.id, (r) =>
+        r.status === '반려' ? { ...r, status: '접수', finalApprovalDate: '', history: [...r.history, entry('재제출', action.actor)] } : r,
+      );
 
     case 'SET_ADMIN_COMMENT': {
-      const patch = (r: any) => ({
-        ...r,
-        adminComment: action.comment,
-        history: [...r.history, entry('행정실 코멘트', action.actor)],
-      });
+      const patch = (r: any) => ({ ...r, adminComment: action.comment, history: [...r.history, entry('행정실 코멘트', action.actor)] });
       if (action.domain === 'dept') return mutDept(state, action.id, patch);
       if (action.domain === 'toeic') return mutToeic(state, action.id, patch);
       return mutVol(state, action.id, patch);
     }
-
     case 'RESET':
       return initialSeed();
     default:
@@ -269,6 +234,7 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, [state]);
+
   return <Ctx.Provider value={{ state, dispatch }}>{children}</Ctx.Provider>;
 }
 
@@ -277,6 +243,3 @@ export function useRecords(): RecordsCtx {
   if (!c) throw new Error('useRecords must be used within RecordsProvider');
   return c;
 }
-
-
-

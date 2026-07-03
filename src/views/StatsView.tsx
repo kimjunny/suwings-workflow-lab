@@ -29,10 +29,10 @@ export default function StatsView() {
       const deptPct = deptRecs.length ? Math.max(...deptRecs.map((r) => deptPercent(r.status))) : 0;
 
       // 토익: 최종 승인 있으면 100 else 0
-      const toeicPct = state.toeic.some((r) => r.studentId === s.studentId && r.status === '승인') ? 100 : 0;
+      const toeicPct = state.toeic.some((r) => r.studentId === s.studentId && (r.status === '최종 승인' || r.status === '승인')) ? 100 : 0;
 
       // 봉사: 최종승인된 누적시간 기준, 20시간 대비 %
-      const volApproved = state.volunteer.filter((r) => r.studentId === s.studentId && r.status === '승인');
+      const volApproved = state.volunteer.filter((r) => r.studentId === s.studentId && (r.status === '최종 승인' || r.status === '승인'));
       const volHours = volApproved.reduce((sum, r) => Math.max(sum, r.accumulatedHours), 0);
       const volPct = Math.min(volHours / 20, 1) * 100;
 

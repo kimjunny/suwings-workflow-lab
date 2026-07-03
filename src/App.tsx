@@ -5,6 +5,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import AppShell from './components/layout/AppShell';
 import LoginView from './views/LoginView';
 import IntegratedView from './views/IntegratedView';
+import StudentSubmitView from './views/StudentSubmitView';
 import DeptProgramView from './views/DeptProgramView';
 import ToeicView from './views/ToeicView';
 import VolunteerView from './views/VolunteerView';
@@ -14,10 +15,10 @@ import { canAccessView } from './auth/roles';
 function HomeRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  const first = (['integrated', 'dept', 'toeic', 'volunteer', 'stats'] as const).find((v) =>
+  const first = (['integrated', 'submit', 'dept', 'toeic', 'volunteer', 'stats'] as const).find((v) =>
     canAccessView(user.role, v),
   );
-  return <Navigate to={`/${first ?? 'integrated'}`} replace />;
+  return <Navigate to={first === 'submit' ? '/submit' : `/${first ?? 'integrated'}`} replace />;
 }
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/integrated" element={<ProtectedRoute view="integrated"><IntegratedView /></ProtectedRoute>} />
+        <Route path="/submit" element={<ProtectedRoute view="submit"><StudentSubmitView /></ProtectedRoute>} />
         <Route path="/dept" element={<ProtectedRoute view="dept"><DeptProgramView /></ProtectedRoute>} />
         <Route path="/toeic" element={<ProtectedRoute view="toeic"><ToeicView /></ProtectedRoute>} />
         <Route path="/volunteer" element={<ProtectedRoute view="volunteer"><VolunteerView /></ProtectedRoute>} />

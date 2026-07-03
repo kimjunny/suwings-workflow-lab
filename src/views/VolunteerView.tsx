@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
-import { can, canView } from '../auth/roles';
+import { can, canView, canStudentEdit, isFinalApproved } from '../auth/roles';
 import { VolunteerRecord } from '../types';
 import { PROFESSORS } from '../data/seed';
 import PageHeader from '../components/ui/PageHeader';
@@ -16,6 +16,9 @@ import { FieldGroup, Input, Select } from '../components/ui/Field';
 import { useToast } from '../components/ui/Toast';
 import { Plus, Eye } from 'lucide-react';
 
+const readyForFirst = (r: VolunteerRecord) => r.status === '접수' || r.status === '검토중' || r.status === '반려';
+const readyForFinal = (r: VolunteerRecord) => r.status === '1차 승인' || r.status === '검토중';
+
 export default function VolunteerView() {
   const { state } = useRecords();
   const { user } = useAuth();
@@ -28,24 +31,26 @@ export default function VolunteerView() {
   );
   if (!user) return null;
   const current = detail ? state.volunteer.find((r) => r.id === detail.id) ?? null : null;
+  const title = user.role === 'STUDENT' ? '봉사 인증서 업로드' : user.role === 'PROFESSOR' ? '봉사 배정 검토함' : user.role === 'STAFF' ? '봉사 관리자 코멘트' : '봉사 최종승인';
 
   return (
     <div>
-      <PageHeader title="전공연계봉사활동" sub="봉사 이수현황" right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 봉사 등록</Button>} />
+      <PageHeader title={title} sub="전공연계봉사활동" right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 봉사 등록</Button>} />
 
       <Table>
         <THead>
-          <Th>봉사활동명</Th><Th>학번</Th><Th>이름</Th><Th>학기</Th><Th>인정시간</Th><Th>누적시간</Th><Th>진행상태</Th><Th>최종 승인일</Th><Th></Th>
+          <Th>봉사활동명</Th><Th>학번</Th><Th>이름</Th><Th>담당교수</Th><Th>학기</Th><Th>인정시간</Th><Th>누적시간</Th><Th>진행상태</Th><Th>최종 승인일</Th><Th></Th>
         </THead>
         <tbody data-testid="vol-tbody">
           {rows.length === 0 ? (
-            <TableEmpty colSpan={9} message="등록된 봉사활동이 없습니다." />
+            <TableEmpty colSpan={10} message="등록된 봉사활동이 없습니다." />
           ) : (
             rows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                 <Td className="text-slate-800 font-medium">{r.title}</Td>
                 <Td className="text-slate-600">{r.studentId}</Td>
                 <Td className="text-slate-700">{r.name}</Td>
+                <Td className="text-slate-600">{r.professor}</Td>
                 <Td className="text-slate-600">{r.semester}</Td>
                 <Td className="text-slate-600">{r.recognizedHours}h</Td>
                 <Td className="text-slate-800 font-semibold">{r.accumulatedHours}h</Td>
@@ -115,6 +120,7 @@ function DetailModal({ record, onClose }: { record: VolunteerRecord; onClose: ()
   const actor = { name: user.name, role: user.role };
   const isOwnerStudent = record.studentId === user.studentId;
   const pct = Math.min(record.accumulatedHours / 20, 1) * 100;
+  const canReject = (can(user, 'approve_first', record) && readyForFirst(record)) || (can(user, 'approve_final', record) && readyForFinal(record));
 
   return (
     <Modal open onClose={onClose} title={record.title} width="max-w-2xl">
@@ -129,14 +135,12 @@ function DetailModal({ record, onClose }: { record: VolunteerRecord; onClose: ()
 
       <div className="mb-4">
         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">봉사 인증서</p>
-        {can(user, 'submit_report', record) && isOwnerStudent && record.status !== '승인' ? (
+        {can(user, 'submit_report', record) && isOwnerStudent && !isFinalApproved(record) ? (
           <FileDropField
             value={record.certFile}
             accept="application/pdf,image/*"
             hint="담당교수 서명이 있는 인증서 (스캔 PDF/이미지)"
-            onSelect={(file) => {
-              dispatch({ type: 'UPLOAD_CERT', id: record.id, file, actor }); toast('인증서를 업로드했습니다.'); // no-op guard removed below
-            }}
+            onSelect={(file) => { dispatch({ type: 'UPLOAD_CERT', id: record.id, file, actor }); toast('인증서를 업로드했습니다.'); }}
           />
         ) : record.certFile ? (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{record.certFile.name}</div>
@@ -146,15 +150,22 @@ function DetailModal({ record, onClose }: { record: VolunteerRecord; onClose: ()
       </div>
 
       <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
-        {(record.status === '접수' || record.status === '검토중') && can(user, 'approve_simple') && (
-          <Button variant="success" size="sm" data-testid="vol-approve"
-            onClick={() => { dispatch({ type: 'APPROVE_VOLUNTEER', id: record.id, actor }); toast('봉사활동을 승인했습니다.'); }}>승인</Button>
+        {readyForFirst(record) && can(user, 'approve_first', record) && (
+          <Button variant="success" size="sm" data-testid="vol-approve-first"
+            onClick={() => { dispatch({ type: 'APPROVE_VOLUNTEER_PROFESSOR', id: record.id, actor }); toast('봉사활동을 1차 승인했습니다.'); }}>1차 승인</Button>
         )}
-        {record.status === '승인' && can(user, 'cancel') && (
-          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'CANCEL_VOLUNTEER', id: record.id, actor }); toast('승인을 취소했습니다.', 'info'); }}>승인 취소</Button>
+        {readyForFinal(record) && can(user, 'approve_final', record) && (
+          <Button variant="success" size="sm" data-testid="vol-approve-final"
+            onClick={() => { dispatch({ type: 'APPROVE_VOLUNTEER_FINAL_HEAD', id: record.id, actor }); toast('봉사활동을 최종 승인했습니다.'); }}>최종 승인</Button>
         )}
-        {(record.status === '접수' || record.status === '검토중') && can(user, 'approve_simple') && (
+        {isFinalApproved(record) && can(user, 'cancel', record) && (
+          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'CANCEL_VOLUNTEER', id: record.id, actor }); toast('최종 승인을 취소했습니다.', 'info'); }}>최종 승인 취소</Button>
+        )}
+        {canReject && (
           <Button variant="danger" size="sm" onClick={() => setReject(true)}>반려</Button>
+        )}
+        {record.status === '반려' && canStudentEdit(user, record) && (
+          <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'RESUBMIT_VOLUNTEER', id: record.id, actor }); toast('재제출했습니다.', 'info'); }}>재제출</Button>
         )}
       </div>
 

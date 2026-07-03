@@ -31,7 +31,7 @@ export type DeptStatus =
   | '반려';
 
 // 토익 / 봉사 승인 상태
-export type SimpleStatus = '접수' | '검토중' | '승인' | '반려';
+export type SimpleStatus = '접수' | '1차 승인' | '최종 승인' | '검토중' | '승인' | '반려';
 
 export interface TeamMember {
   studentId: string;

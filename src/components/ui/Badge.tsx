@@ -10,6 +10,7 @@ const TONE: Record<string, string> = {
   '반려': 'bg-red-50 text-red-700 border-red-200',
   '접수': 'bg-slate-100 text-slate-700 border-slate-200',
   '검토중': 'bg-amber-50 text-amber-700 border-amber-200',
+  '1차 승인': 'bg-violet-50 text-violet-700 border-violet-200',
   '승인': 'bg-green-50 text-green-700 border-green-200',
 };
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
-import { can, canView } from '../auth/roles';
+import { can, canView, canStudentEdit } from '../auth/roles';
 import { DeptProgramRecord, TeamMember } from '../types';
 import { PROFESSORS } from '../data/seed';
 import PageHeader from '../components/ui/PageHeader';
@@ -38,7 +38,7 @@ export default function DeptProgramView() {
   return (
     <div>
       <PageHeader
-        title="학과내 비교과 프로그램"
+        title={user.role === 'STUDENT' ? '학과내 비교과 신청·제출' : user.role === 'PROFESSOR' ? '학과내 배정 검토함' : user.role === 'STAFF' ? '학과내 관리자 코멘트' : '학과내 최종승인'}
         sub="이수현황"
         right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 신규 등록</Button>}
       />
@@ -219,7 +219,7 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
         <div className="space-y-4">
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">보고서 (PDF)</p>
-            {record.status === '계획서 승인' && can(user, 'submit_report', record) && isOwnerStudent ? (
+            {(record.status === '계획서 승인' || record.status === '반려') && can(user, 'submit_report', record) && isOwnerStudent ? (
               <FileDropField
                 value={record.reportFile}
                 hint="서명 페이지 1장 + 발표포스터 1장 합본 PDF"
@@ -263,6 +263,10 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
             {can(user, 'cancel', record) && (record.status === '최종 승인' || record.status === '보고서 담당승인' || record.status === '계획서 승인' || record.status === '보고서 접수') && (
               <Button variant="secondary" size="sm" onClick={() => setCancel(true)}>승인 취소</Button>
             )}
+
+            {record.status === '반려' && canStudentEdit(user, record) && (
+              <Button variant="secondary" size="sm" onClick={() => act(() => dispatch({ type: 'RESUBMIT_DEPT', id: record.id, actor }), '재제출했습니다.')}>재제출</Button>
+            )}
             {can(user, 'admin_comment', record) && (
               <div className="w-full mt-2">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">행정실 코멘트</p>
@@ -292,7 +296,7 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
         onConfirm={(reason) => { dispatch({ type: 'REJECT_DEPT', id: record.id, reason: reason ?? '', actor }); toast('반려 처리했습니다.', 'info'); setReject(false); }}
       />
       <ConfirmDialog
-        open={cancel} title="승인 취소" message="직전 단계로 되돌립니다. 계속할까요?" confirmLabel="승인 취소" variant="secondary"
+        open={cancel} title="승인 취소" message="최종 승인 건을 직전 단계로 되돌립니다. 계속할까요?" confirmLabel="승인 취소" variant="secondary"
         onClose={() => setCancel(false)}
         onConfirm={() => { dispatch({ type: 'CANCEL_DEPT', id: record.id, actor }); toast('승인을 취소했습니다.', 'info'); setCancel(false); }}
       />
