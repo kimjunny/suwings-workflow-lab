@@ -3,9 +3,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { canAccessView, ViewKey } from '../../auth/roles';
 import { ROLE_LABEL, Role } from '../../types';
-import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw, ClipboardCheck, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw, ClipboardCheck, MessageSquare, Settings } from 'lucide-react';
 import { useRecords } from '../../store/recordsStore';
 import { useToast } from '../ui/Toast';
+import { useSettings } from '../../store/settingsStore';
 
 const ICONS = {
   integrated: LayoutDashboard,
@@ -14,6 +15,7 @@ const ICONS = {
   toeic: Languages,
   volunteer: HeartHandshake,
   stats: BarChart3,
+  settings: Settings,
 } satisfies Record<ViewKey, React.ComponentType<{ size?: number }>>;
 
 type NavItem = { key: ViewKey; to: string; label: string; icon: React.ComponentType<{ size?: number }> };
@@ -40,6 +42,7 @@ const roleNav = (role: Role): NavItem[] => {
         item('toeic', '/toeic', '토익 최종승인'),
         item('volunteer', '/volunteer', '봉사 최종승인'),
         item('stats', '/stats', '통계'),
+        item('settings', '/settings', '설정'),
       ];
     case 'STAFF':
       return [
@@ -47,6 +50,7 @@ const roleNav = (role: Role): NavItem[] => {
         item('dept', '/dept', '학과내 코멘트', MessageSquare),
         item('toeic', '/toeic', '토익 코멘트', MessageSquare),
         item('volunteer', '/volunteer', '봉사 코멘트', MessageSquare),
+        item('settings', '/settings', '설정'),
       ];
     default:
       return [];
@@ -58,6 +62,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const { dispatch } = useRecords();
   const { toast } = useToast();
+  const { state: settings } = useSettings();
   const [open, setOpen] = useState(false);
 
   if (!user) return null;
@@ -114,7 +119,22 @@ export default function AppShell() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 sm:px-6 shrink-0">
           <button className="lg:hidden text-slate-600" onClick={() => setOpen(true)}><Menu size={20} /></button>
-          <div className="flex-1" />
+          <div className="flex-1">
+            {(settings.deadlines.length > 0 || settings.notices.length > 0) && (
+              <div className="hidden md:flex flex-wrap items-center gap-2 text-xs">
+                {settings.deadlines.slice(0, 2).map((d) => (
+                  <span key={d.id} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">
+                    {d.label}: {d.dueDate}
+                  </span>
+                ))}
+                {settings.notices.slice(0, 1).map((n) => (
+                  <span key={n.id} className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-blue-800">
+                    {n.title}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <div className="text-right leading-tight">
               <div className="text-sm font-medium text-slate-800">{user.name}</div>

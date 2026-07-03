@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import { can, canView, canStudentEdit } from '../auth/roles';
 import { DeptProgramRecord, TeamMember } from '../types';
 import { PROFESSORS } from '../data/seed';
+import { downloadRecordDocx } from '../utils/documents';
+import { useSettings } from '../store/settingsStore';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -189,6 +191,7 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
   const { dispatch } = useRecords();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { state: settings } = useSettings();
   const [adminComment, setAdminComment] = useState(record.adminComment);
   const [professorComment, setProfessorComment] = useState(record.professorComment);
   const [reject, setReject] = useState(false);
@@ -201,6 +204,23 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
   const hasPoster = Boolean(record.posterSubmitted);
 
   const act = (fn: () => void, msg: string) => { fn(); toast(msg); };
+  const signature = settings.signatures.find((s) => s.professorName === record.professor);
+  const documentButton = (kind: 'application' | 'result', label: string) => (
+    <>
+      <Button variant="secondary" size="sm" onClick={() => downloadRecordDocx(record, kind, signature)}>{label} 다운로드</Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => {
+          dispatch({ type: 'SET_DOCUMENT_STATUS', domain: 'dept', id: record.id, kind, actor });
+          toast(`${label} 구글 드라이브 전송됨`, 'success');
+        }}
+      >
+        {label} 드라이브 전송{record.documentStatus?.[kind] ? ` (${record.documentStatus[kind]})` : ''}
+      </Button>
+    </>
+  );
+
 
   
 
@@ -221,6 +241,12 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
           {record.professorComment && <Row k="담당교수 코멘트" v={record.professorComment} />}
           {record.adminComment && <Row k="행정실 코멘트" v={record.adminComment} />}
         </div>
+          {signature && (
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">담당교수 서명</p>
+              <img src={signature.dataUrl} alt={`${signature.professorName} 서명`} className="h-16 max-w-full object-contain rounded bg-slate-50" />
+            </div>
+          )}
 
         <div className="space-y-4">
           <div>
@@ -258,6 +284,8 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
 
           {/* 액션 버튼 (역할 게이팅) */}
           <div className="flex flex-wrap gap-2">
+            {documentButton('application', '신청서')}
+            {documentButton('result', '결과보고서')}
             {record.status === '계획서 접수' && can(user, 'approve_plan', record) && (
               <Button variant="success" size="sm" data-testid="approve-plan"
                 onClick={() => act(() => dispatch({ type: 'APPROVE_PLAN', id: record.id, actor }), '계획서를 승인했습니다.')}>

@@ -43,6 +43,13 @@ export interface FileMeta {
   size: number; // bytes
   uploadedAt: string;
 }
+export type DocumentKind = 'application' | 'result';
+
+export interface DocumentStatus {
+  application?: '전송됨';
+  result?: '전송됨';
+}
+
 
 // 승인/전이 이력 (비파괴: 항상 append)
 export interface HistoryEntry {
@@ -65,6 +72,7 @@ interface RecordBase {
   lastUpdate: string;     // 최신순 정렬 키 (ISO)
   adminComment: string;   // 행정실 관리자 코멘트
   history: HistoryEntry[];
+  documentStatus?: DocumentStatus;
 }
 
 export interface DeptProgramRecord extends RecordBase {

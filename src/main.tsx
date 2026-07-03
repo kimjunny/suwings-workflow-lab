@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { RecordsProvider } from './store/recordsStore';
 import { AuthProvider } from './auth/AuthContext';
+import { SettingsProvider } from './store/settingsStore';
 import { ToastProvider } from './components/ui/Toast';
 import './index.css';
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <RecordsProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
+          <SettingsProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </SettingsProvider>
         </RecordsProvider>
       </AuthProvider>
     </BrowserRouter>

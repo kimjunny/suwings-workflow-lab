@@ -62,6 +62,7 @@ export type Action =
   | { type: 'CANCEL_VOLUNTEER'; id: string; actor: Actor }
   | { type: 'RESUBMIT_VOLUNTEER'; id: string; actor: Actor }
   | { type: 'SET_ADMIN_COMMENT'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; comment: string; actor: Actor }
+  | { type: 'SET_DOCUMENT_STATUS'; domain: 'dept' | 'volunteer'; id: string; kind: 'application' | 'result'; actor: Actor }
   | { type: 'RESET' };
 
 const now = () => new Date().toISOString().slice(0, 19);
@@ -209,6 +210,21 @@ function reducer(state: RecordsState, action: Action): RecordsState {
       if (action.domain === 'dept') return mutDept(state, action.id, patch);
       if (action.domain === 'toeic') return mutToeic(state, action.id, patch);
       return mutVol(state, action.id, patch);
+    }
+    case 'SET_DOCUMENT_STATUS': {
+      const step = `${action.kind === 'application' ? '신청서' : '결과보고서'} 구글 드라이브 전송`;
+      if (action.domain === 'dept') {
+        return mutDept(state, action.id, (r) => ({
+          ...r,
+          documentStatus: { ...(r.documentStatus ?? {}), [action.kind]: '전송됨' as const },
+          history: [...r.history, entry(step, action.actor)],
+        }));
+      }
+      return mutVol(state, action.id, (r) => ({
+        ...r,
+        documentStatus: { ...(r.documentStatus ?? {}), [action.kind]: '전송됨' as const },
+        history: [...r.history, entry(step, action.actor)],
+      }));
     }
     case 'RESET':
       return initialSeed();

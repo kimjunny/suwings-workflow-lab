@@ -1,13 +1,13 @@
 import { Role, User, AnyRecord } from '../types';
 
 // 화면(라우트) 접근 권한: 역할 → 접근 가능한 화면 키
-export type ViewKey = 'integrated' | 'submit' | 'dept' | 'toeic' | 'volunteer' | 'stats';
+export type ViewKey = 'integrated' | 'submit' | 'dept' | 'toeic' | 'volunteer' | 'stats' | 'settings';
 
 export const VIEW_ACCESS: Record<Role, ViewKey[]> = {
   STUDENT: ['integrated', 'submit', 'dept', 'toeic', 'volunteer'],
   PROFESSOR: ['integrated', 'dept', 'toeic', 'volunteer'],
-  HEAD: ['integrated', 'dept', 'toeic', 'volunteer', 'stats'],
-  STAFF: ['integrated', 'dept', 'toeic', 'volunteer'],
+  HEAD: ['integrated', 'dept', 'toeic', 'volunteer', 'stats', 'settings'],
+  STAFF: ['integrated', 'dept', 'toeic', 'volunteer', 'settings'],
 };
 
 export const canAccessView = (role: Role, view: ViewKey) => VIEW_ACCESS[role].includes(view);

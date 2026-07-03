@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { USERS } from '../data/seed';
 import { ROLE_LABEL } from '../types';
+import { useSettings } from '../store/settingsStore';
 import Button from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Field';
 import { GraduationCap, AlertCircle } from 'lucide-react';
 
 export default function LoginView() {
   const { login } = useAuth();
+  const { state: settings } = useSettings();
   const navigate = useNavigate();
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
@@ -37,6 +39,12 @@ export default function LoginView() {
           <h1 className="text-lg font-semibold text-slate-900">삼육대학교 약학대학</h1>
           <p className="text-sm text-slate-500">비교과 프로그램 이수현황 관리</p>
         </div>
+          {settings.notices.slice(0, 2).map((notice) => (
+            <div key={notice.id} className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 p-3 text-left text-sm text-blue-900">
+              <div className="font-semibold">{notice.title}</div>
+              <div className="text-xs text-blue-800">{notice.body}</div>
+            </div>
+          ))}
 
         <form onSubmit={submit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
