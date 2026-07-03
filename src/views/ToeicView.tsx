@@ -32,7 +32,7 @@ export default function ToeicView() {
   if (!user) return null;
   const current = detail ? state.toeic.find((r) => r.id === detail.id) ?? null : null;
 
-  const title = user.role === 'STUDENT' ? '토익 정보 입력' : user.role === 'PROFESSOR' ? '토익 배정 검토함' : user.role === 'STAFF' ? '토익 관리자 코멘트' : '토익 최종승인';
+  const title = user.role === 'STUDENT' ? '토익 정보 입력' : user.role === 'PROFESSOR' ? '토익 전체 목록' : user.role === 'STAFF' ? '토익 관리자 코멘트' : '토익 최종승인';
 
   return (
     <div>

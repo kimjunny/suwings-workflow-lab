@@ -28,7 +28,7 @@ const roleNav = (role: Role): NavItem[] => {
       ];
     case 'PROFESSOR':
       return [
-        item('integrated', '/integrated', '배정 검토함'),
+        item('integrated', '/integrated', '전체 목록'),
         item('dept', '/dept', '학과내 검토'),
         item('toeic', '/toeic', '토익 검토'),
         item('volunteer', '/volunteer', '봉사 검토'),
