@@ -31,7 +31,7 @@ export default function VolunteerView() {
   );
   if (!user) return null;
   const current = detail ? state.volunteer.find((r) => r.id === detail.id) ?? null : null;
-  const title = user.role === 'STUDENT' ? '봉사 인증서 업로드' : user.role === 'PROFESSOR' ? '봉사 전체 목록' : user.role === 'STAFF' ? '봉사 관리자 코멘트' : '봉사 최종승인';
+  const title = user.role === 'STUDENT' ? '봉사 인증서 업로드' : user.role === 'PROFESSOR' ? '봉사 목록' : user.role === 'STAFF' ? '봉사 관리자 코멘트' : '봉사 최종승인';
 
   return (
     <div>

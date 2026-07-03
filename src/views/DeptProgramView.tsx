@@ -38,7 +38,7 @@ export default function DeptProgramView() {
   return (
     <div>
       <PageHeader
-        title={user.role === 'STUDENT' ? '학과내 비교과 신청·제출' : user.role === 'PROFESSOR' ? '학과내 전체 목록' : user.role === 'STAFF' ? '학과내 관리자 코멘트' : '학과내 최종승인'}
+        title={user.role === 'STUDENT' ? '학과내 비교과 신청·제출' : user.role === 'PROFESSOR' ? '학과내 목록' : user.role === 'STAFF' ? '학과내 관리자 코멘트' : '학과내 최종승인'}
         sub="이수현황"
         right={can(user, 'create') && <Button onClick={() => setCreateOpen(true)}><Plus size={16} /> 신규 등록</Button>}
       />
