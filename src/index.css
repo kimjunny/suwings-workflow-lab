@@ -2,7 +2,7 @@
 
 @layer base {
   body {
-    font-family: "Gulim", "Dotum", "Malgun Gothic", sans-serif !important;
+    font-family: "Gungsuh", "GungsuhChe", "궁서", "궁서체", serif !important;
     background-color: #ffffff !important;
     color: #333333 !important;
     font-size: 11px !important; /* SU-WINGs 특유의 매우 좁고 빽빽한 폰트 사이즈 */

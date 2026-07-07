@@ -96,21 +96,10 @@ export default function AppShell() {
         <div className="flex items-center gap-6">
           {/* 로고 */}
           <span className="text-[#10489c] font-black italic text-base tracking-tighter cursor-pointer">SU-WINGs</span>
-          {/* 시간 연장 타이머 */}
-          <div className="flex items-center gap-2">
-            <button className="su-btn-gray">시간연장</button>
-            <span className="text-[#666666]">
-              현재 남은 시간은 <span className="text-[#ff0000] font-bold">29분 58초</span> 입니다.
-            </span>
-          </div>
           {/* 접속 정보 */}
           <span className="text-[#999999] hidden lg:inline">
             이전 접속시각 : 2026-07-07 10:30:34, IP : 61.97.55.27
           </span>
-        </div>
-        {/* 우측 바로가기 링크 */}
-        <div className="text-[#666666] hidden md:block">
-          홈페이지 | 도서관 | 그룹웨어 | e-Class | CTL | 원격지원 | SU 수강신청
         </div>
       </header>
 
@@ -125,15 +114,8 @@ export default function AppShell() {
         <div className="flex items-center gap-2 text-white">
           <span className="font-bold">{user.name} ({user.studentId ?? user.id})</span>
           <button onClick={doLogout} className="su-btn-gray font-bold">로그아웃</button>
-          <button className="su-btn-gray font-bold">비밀번호변경</button>
-          
-          <span className="mx-2 text-slate-400">|</span>
-          
-          <button className="su-btn-blue px-2 py-0.5">새로고침</button>
-          <button className="su-btn-blue px-2 py-0.5">✕ 탭모두닫기</button>
         </div>
       </header>
-
       {/* 3. 메인 분할 구조 (사이드바 트리 + 메인 콘텐츠) */}
       <div className="flex flex-1 overflow-hidden">
         {/* 좌측 폴더 트리 네비게이션 */}
@@ -147,62 +129,20 @@ export default function AppShell() {
 
           {/* 트리 메뉴 */}
           <nav className="flex-1 py-2 px-1 overflow-y-auto space-y-1 select-none bg-white font-mono text-[11px] su-tree-menu">
-            <div className="space-y-0.5">
-              <div className="su-tree-item font-black text-slate-800 flex items-center gap-1">
-                <span>▼</span>
-                <span>📁</span>
-                <span>[학부] 비교과정보</span>
-              </div>
-              <div className="pl-3 space-y-0.5">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.key}
-                    to={item.to}
-                    onClick={() => setOpen(false)}
-                    className={({ isActive }) =>
-                      `su-tree-item flex items-center gap-1 ${isActive ? 'su-tree-item-active' : ''}`
-                    }
-                  >
-                    <span>📄</span>
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-            
-            {/* 고증을 위한 더미 탐색기 트리 구조 */}
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 학적정보</span>
-            </div>
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 수업정보</span>
-            </div>
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 성적정보</span>
-            </div>
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 장학정보</span>
-            </div>
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 등록정보</span>
-            </div>
-            <div className="su-tree-item text-slate-400 font-black flex items-center gap-1">
-              <span>▶</span>
-              <span>📁</span>
-              <span>[학부] 예비군정보</span>
-            </div>
+            {items.map((item) => (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  `su-tree-item flex items-center gap-1 ${isActive ? 'su-tree-item-active' : ''}`
+                }
+              >
+                <span>📄</span>
+                {item.label}
+              </NavLink>
+            ))}
           </nav>
-          
           {/* 육군 교육통제지침 (고증 융합) */}
           <div className="p-2 bg-[#f1f3f5] border-t border-[#adadad] font-mono text-[9px] text-[#555555] leading-normal text-left">
             <strong>[육군교육지침-국군조직법]</strong><br />
@@ -214,12 +154,10 @@ export default function AppShell() {
         <div className="flex-1 flex flex-col overflow-hidden bg-[#f4f4f4]">
           {/* 상단 다중 탭바 */}
           <div className="su-tab-bar shrink-0">
-            <div className="su-tab select-none">공지사항 <span className="su-tab-close">✕</span></div>
             <div className="su-tab su-tab-active select-none">
               {activeLabel} <span className="su-tab-close">✕</span>
             </div>
           </div>
-          
           {/* 실질적 화면 콘텐츠가 담기는 바닥 */}
           <main className="flex-1 overflow-auto p-3 bg-white border-t border-[#adadad]">
             <div className="mx-auto max-w-[1280px]">
