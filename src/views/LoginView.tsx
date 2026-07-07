@@ -6,7 +6,7 @@ import { ROLE_LABEL } from '../types';
 import { useSettings } from '../store/settingsStore';
 import Button from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Field';
-import { GraduationCap, AlertCircle } from 'lucide-react';
+import { ShieldAlert, AlertCircle, Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 export default function LoginView() {
   const { login } = useAuth();
@@ -30,53 +30,62 @@ export default function LoginView() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-3 shadow-md">
-            <GraduationCap size={26} />
-          </div>
-          <h1 className="text-lg font-semibold text-slate-900">삼육대학교 약학대학</h1>
-          <p className="text-sm text-slate-500">비교과 프로그램 이수현황 관리</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#e9ecef] px-4 font-mono select-none">
+      <div className="w-full max-w-sm flex flex-col gap-4 border border-[#222222] bg-[#ffffff] p-6">
+        <div className="text-center border-b border-[#222222] pb-3">
+          <h1 className="text-sm font-black text-[#1a251e] tracking-tight">
+            국방 비교과 학사행정체계 (DELIS)
+          </h1>
+          <p className="text-[10px] text-slate-500 font-bold mt-1">
+            [등급: II급 비밀 정보체계]
+          </p>
         </div>
-          {settings.notices.slice(0, 2).map((notice) => (
-            <div key={notice.id} className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 p-3 text-left text-sm text-blue-900">
-              <div className="font-semibold">{notice.title}</div>
-              <div className="text-xs text-blue-800">{notice.body}</div>
-            </div>
-          ))}
 
-        <form onSubmit={submit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label>아이디</Label>
-            <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="아이디" autoFocus />
+        {/* 심플한 경고 알림 */}
+        <div className="border border-[#b23b3b] p-2.5 text-[11px] text-[#b23b3b] bg-[#fff5f5] leading-normal font-bold">
+          <strong>[보안통제 경고]</strong> 본 망은 군 내부 전용망입니다. 허가받지 않은 모든 접근과 무단 정보 수집 행위는 군사보안 수칙에 의거 추적 및 엄벌합니다.
+        </div>
+
+        <form onSubmit={submit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-700">군번 / ID</label>
+            <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="군번 또는 ID" autoFocus />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>비밀번호</Label>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-700">비밀번호 / PASSWORD</label>
             <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="비밀번호" />
           </div>
           {error && (
-            <div className="flex items-center gap-1.5 text-sm text-red-600">
-              <AlertCircle size={14} /> {error}
+            <div className="flex items-center gap-1 text-xs text-[#b23b3b] font-bold">
+              <AlertCircle size={12} /> {error}
             </div>
           )}
-          <Button type="submit" className="w-full">로그인</Button>
+          <Button type="submit" variant="success" className="w-full text-xs py-2 mt-1">
+            보안 접속 요청
+          </Button>
         </form>
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">데모 계정 (클릭하여 자동 입력)</p>
-          <div className="grid grid-cols-2 gap-2">
-            {USERS.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => quick(u.id, u.pw)}
-                className="text-left rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
-              >
-                <span className="block text-sm font-medium text-slate-800">{ROLE_LABEL[u.role]}</span>
-                <span className="block text-xs text-slate-400">{u.id} / {u.pw}</span>
-              </button>
-            ))}
+        {/* 간소화된 계정 리스트 */}
+        <div className="border-t border-[#cccccc] pt-3 text-xs flex flex-col gap-2">
+          <div className="text-[10px] text-slate-500 font-bold">대원 로그인 정보 시뮬레이션 (원클릭 자동 입력)</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {USERS.map((u) => {
+              const milRole =
+                u.role === 'STUDENT' ? '학사생도' :
+                u.role === 'PROFESSOR' ? '지도대위' :
+                u.role === 'HEAD' ? '대대장' : '행정 준위';
+              return (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => quick(u.id, u.pw)}
+                  className="text-left border border-[#cccccc] bg-[#f8f9fa] p-2 hover:bg-[#e9ecef] cursor-pointer"
+                >
+                  <span className="block text-[11px] font-black text-slate-800">{milRole}: {u.name}</span>
+                  <span className="block text-[10px] text-slate-500 font-mono">{u.id}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

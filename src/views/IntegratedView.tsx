@@ -9,7 +9,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import HistoryList from '../components/HistoryList';
 import { Eye } from 'lucide-react';
-import { TableEmpty } from '../components/ui/Table';
+import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
 import { FieldGroup, Input, Select } from '../components/ui/Field';
 import { matchText } from '../utils/filters';
 
@@ -309,42 +309,38 @@ export default function IntegratedView() {
         </div>
       </section>
 
-      <div className="overflow-auto rounded-md border border-slate-300 bg-white shadow-sm">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-blue-900 bg-blue-950 text-[11px] font-bold uppercase tracking-wider text-white">
-              <th className="px-3 py-2 whitespace-nowrap">학년</th>
-              <th className="px-3 py-2 whitespace-nowrap">학번</th>
-              <th className="px-3 py-2 whitespace-nowrap">이름</th>
-              <th className="px-3 py-2 whitespace-nowrap">연도</th>
-              <th className="px-3 py-2 whitespace-nowrap">학기</th>
-              <th className="px-3 py-2 whitespace-nowrap">비교과 종류</th>
-              <th className="px-3 py-2 whitespace-nowrap">진행상태</th>
-              <th className="px-3 py-2 whitespace-nowrap">비고</th>
-              <th className="px-3 py-2 whitespace-nowrap"></th>
-            </tr>
-          </thead>
-          <tbody data-testid="integrated-tbody">
-            {rows.length === 0 ? (
-              <TableEmpty colSpan={9} message="조건에 맞는 데이터가 없습니다." />
-            ) : (
-              rows.map((r, index) => (
-                <tr key={`${r.programType}-${r.id}`} className={`border-b border-slate-200 transition-colors hover:bg-blue-50/60 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}`}>
-                  <td className="px-3 py-2 font-medium text-slate-700">{r.grade}</td>
-                  <td className="px-3 py-2 text-slate-700">{r.studentId}</td>
-                  <td className="px-3 py-2 font-semibold text-slate-900">{r.name}</td>
-                  <td className="px-3 py-2 text-slate-700">{r.year}</td>
-                  <td className="px-3 py-2 text-slate-700">{r.semester}</td>
-                  <td className="px-3 py-2 text-slate-800">{r.programType}</td>
-                  <td className="px-3 py-2"><Badge status={r.status} /></td>
-                  <td className="max-w-[160px] truncate px-3 py-2 text-xs text-slate-500"><span title={r.adminComment}>{r.adminComment || '-'}</span></td>
-                  <td className="px-3 py-2"><Button variant="ghost" size="sm" onClick={() => setDetail(r.record)}><Eye size={14} /> 상세</Button></td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <Th>학년</Th>
+          <Th>학번</Th>
+          <Th>이름</Th>
+          <Th>연도</Th>
+          <Th>학기</Th>
+          <Th>비교과 종류</Th>
+          <Th>진행상태</Th>
+          <Th>비고</Th>
+          <Th></Th>
+        </THead>
+        <tbody data-testid="integrated-tbody">
+          {rows.length === 0 ? (
+            <TableEmpty colSpan={9} message="조건에 맞는 데이터가 없습니다." />
+          ) : (
+            rows.map((r) => (
+              <tr key={`${r.programType}-${r.id}`}>
+                <Td className="font-medium">{r.grade}</Td>
+                <Td className="font-mono">{r.studentId}</Td>
+                <Td className="font-semibold">{r.name}</Td>
+                <Td>{r.year}</Td>
+                <Td>{r.semester}</Td>
+                <Td>{r.programType}</Td>
+                <Td><Badge status={r.status} /></Td>
+                <Td className="max-w-[160px] truncate text-xs"><span title={r.adminComment}>{r.adminComment || '-'}</span></Td>
+                <Td><Button variant="ghost" size="sm" onClick={() => setDetail(r.record)}><Eye size={14} /> 상세</Button></Td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </Table>
       {detail && <IntegratedDetailModal record={detail} onClose={() => setDetail(null)} />}
     </div>
   );

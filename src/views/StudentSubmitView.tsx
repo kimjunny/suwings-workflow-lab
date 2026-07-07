@@ -33,11 +33,11 @@ export default function StudentSubmitView() {
           <Link
             key={card.to}
             to={card.to}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+            className="border-2 border-slate-800 bg-white p-5 shadow-[4px_4px_0_rgba(0,0,0,0.2)] hover:bg-[#edf4ee] block select-none cursor-pointer"
           >
-            <card.icon size={24} className="mb-4 text-blue-600" />
-            <h2 className="mb-2 text-base font-semibold text-slate-800">{card.title}</h2>
-            <p className="text-sm leading-6 text-slate-500">{card.description}</p>
+            <card.icon size={20} className="mb-3 text-[#3c6e91]" />
+            <h2 className="mb-2 text-sm font-black text-slate-900">{card.title}</h2>
+            <p className="text-xs leading-5 text-slate-600 font-bold">{card.description}</p>
           </Link>
         ))}
       </div>

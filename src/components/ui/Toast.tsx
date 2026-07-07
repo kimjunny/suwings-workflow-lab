@@ -28,17 +28,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ toast }}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 w-80 max-w-[calc(100vw-3rem)]">
+      <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-3 w-80 max-w-[calc(100vw-3rem)]">
         {items.map((t) => {
           const Icon = ICON[t.kind];
+          const title = t.kind === 'success' ? '성공 (SUCCESS)' : t.kind === 'error' ? '시스템 오류 (ERROR)' : '통보 (INFO)';
           return (
             <div
               key={t.id}
-              className={`flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm shadow-lg animate-[fadeIn_.15s_ease-out] ${TONE[t.kind]}`}
+              className="win7-window flex flex-col shadow-xl animate-[fadeIn_.15s_ease-out] w-full"
             >
-              <Icon size={16} className="mt-0.5 shrink-0" />
-              <span className="flex-1 leading-snug">{t.message}</span>
-              <button onClick={() => remove(t.id)} className="text-current/60 hover:text-current"><X size={14} /></button>
+              <div className="win7-titlebar flex items-center justify-between px-2.5 py-1.5 select-none text-[11px]">
+                <span className="font-bold tracking-tight">{title}</span>
+                <button onClick={() => remove(t.id)} className="win7-close-btn flex items-center justify-center cursor-pointer" style={{ width: '18px', height: '14px' }}>
+                  <X size={8} strokeWidth={3} />
+                </button>
+              </div>
+              <div className="bg-[#f0f3f5] p-3 flex items-start gap-2.5 text-xs text-slate-800">
+                <Icon size={16} className="mt-0.5 shrink-0 text-slate-600" />
+                <span className="flex-1 leading-normal font-bold">{t.message}</span>
+              </div>
             </div>
           );
         })}
