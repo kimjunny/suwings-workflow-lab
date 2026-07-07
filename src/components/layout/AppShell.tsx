@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { canAccessView, ViewKey } from '../../auth/roles';
 import { ROLE_LABEL, Role } from '../../types';
-import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw, ClipboardCheck, MessageSquare, Settings, Bell, Gamepad2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Languages, HeartHandshake, BarChart3, LogOut, Menu, RotateCcw, ClipboardCheck, MessageSquare, Settings, Bell, Gamepad2, FilePen } from 'lucide-react';
 import { useRecords } from '../../store/recordsStore';
 import { useToast } from '../ui/Toast';
 import { useSettings } from '../../store/settingsStore';
@@ -18,6 +18,7 @@ const ICONS = {
   settings: Settings,
   board: MessageSquare,
   galaga: Gamepad2,
+  form: FilePen,
 } satisfies Record<ViewKey, React.ComponentType<{ size?: number }>>;
 
 type NavItem = { key: ViewKey; to: string; label: string; icon: React.ComponentType<{ size?: number }> };
@@ -29,6 +30,7 @@ const roleNav = (role: Role): NavItem[] => {
       return [
         item('integrated', '/integrated', '내 현황'),
         item('submit', '/submit', '신청·제출'),
+        item('form', '/form', '양식 작성 (HWP)'),
         item('board', '/board', '익명 게시판'),
         item('galaga', '/galaga', '갈러그 게임'),
       ];
@@ -257,10 +259,16 @@ function NotificationBell() {
       : state.notifications;
   const unread = mine.filter((n) => !n.read).length;
 
+  // 교수: 학생이 보낸 쪽지 수신
+  const myMessages = user.role === 'PROFESSOR' ? state.messages.filter((m) => m.toProfessor === user.name) : [];
+  const unreadMsgs = myMessages.filter((m) => !m.read).length;
+  const totalUnread = unread + unreadMsgs;
+
   const toggle = () => {
     const willOpen = !open;
     setOpen(willOpen);
     if (willOpen && unread > 0) dispatch({ type: 'MARK_NOTIFICATIONS_READ' });
+    if (willOpen && unreadMsgs > 0) dispatch({ type: 'MARK_MESSAGES_READ', professor: user.name });
   };
 
   return (
@@ -273,12 +281,12 @@ function NotificationBell() {
       >
         <Bell size={13} />
         알림
-        {unread > 0 && (
+        {totalUnread > 0 && (
           <span
             className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center"
             data-testid="notif-count"
           >
-            {unread}
+            {totalUnread}
           </span>
         )}
       </button>
@@ -303,6 +311,25 @@ function NotificationBell() {
                 </div>
               </div>
             ))
+          )}
+          {user.role === 'PROFESSOR' && (
+            <>
+              <div className="px-3 py-2 border-b border-t border-slate-300 font-bold bg-[#e1e6f2]" data-testid="msg-section">
+                학생 쪽지 ({myMessages.length})
+              </div>
+              {myMessages.length === 0 ? (
+                <div className="px-3 py-4 text-center text-slate-400">받은 쪽지가 없습니다.</div>
+              ) : (
+                myMessages.map((m) => (
+                  <div key={m.id} className="px-3 py-2 border-b border-slate-100" data-testid="msg-item">
+                    <div className="text-slate-700 whitespace-pre-wrap">{m.body}</div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      보낸사람: {m.fromName}({m.fromId}) · {m.createdAt.replace('T', ' ')}
+                    </div>
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
       )}

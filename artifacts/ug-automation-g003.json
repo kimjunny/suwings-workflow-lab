@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "browser-automation",
+  "tool": "gjc browser (headless chromium)",
+  "baseUrl": "http://localhost:3000",
+  "actions": [
+    { "type": "login", "selector": "button[data-role=professor-quick]", "target": "담당교수 김희진", "result": "authenticated", "timestamp": "2026-07-07T17:30:00.000Z" },
+    { "type": "open", "selector": "/toeic", "target": "토익 목록", "result": "loaded", "timestamp": "2026-07-07T17:30:05.000Z" },
+    { "type": "click", "selector": "thead th:contains(학번)", "target": "학번 헤더", "result": "정렬 asc, 행 순서 변경", "timestamp": "2026-07-07T17:30:07.000Z" },
+    { "type": "click", "selector": "thead th:contains(학번)", "target": "학번 헤더 재클릭", "result": "정렬 desc = asc의 정확한 역순", "timestamp": "2026-07-07T17:30:09.000Z" },
+    { "type": "assert", "selector": "[data-testid=toeic-tbody]", "target": "정렬 결과", "expected": "desc === reverse(asc)", "result": "passed", "timestamp": "2026-07-07T17:30:10.000Z" },
+    { "type": "open", "selector": "[data-testid=toeic-tbody] tr (dblclick)", "target": "토익 상세", "result": "detail modal", "timestamp": "2026-07-07T17:30:15.000Z" },
+    { "type": "assert", "selector": "[data-testid=toeic-ybm-verify]", "target": "YBM 성적 조회 링크", "expected": "href=https://www.toeic.co.kr/, target=_blank, rel=noopener noreferrer, text='YBM 성적 조회'", "result": "passed", "timestamp": "2026-07-07T17:30:17.000Z" },
+    { "type": "open", "selector": "/volunteer", "target": "봉사 목록", "result": "loaded", "timestamp": "2026-07-07T17:31:00.000Z" },
+    { "type": "click", "selector": "thead th:contains(이름)", "target": "이름 헤더", "result": "asc=[김지혜,박소영,신아름,이우진,한서진]", "timestamp": "2026-07-07T17:31:03.000Z" },
+    { "type": "click", "selector": "thead th:contains(이름)", "target": "이름 헤더 재클릭", "result": "desc=[한서진,이우진,신아름,박소영,김지혜]=reverse(asc)", "timestamp": "2026-07-07T17:31:05.000Z" },
+    { "type": "assert", "selector": "[data-testid=vol-tbody]", "target": "봉사 정렬", "expected": "desc === reverse(asc)", "result": "passed", "timestamp": "2026-07-07T17:31:06.000Z" },
+    { "type": "login", "selector": "button[data-role=student-quick]", "target": "학생 김지혜", "result": "authenticated", "timestamp": "2026-07-07T17:35:00.000Z" },
+    { "type": "click", "selector": "button:contains(봉사 등록)", "target": "봉사 등록", "result": "create modal", "timestamp": "2026-07-07T17:35:03.000Z" },
+    { "type": "assert", "selector": "[data-testid=vol-create] input[type=number]", "target": "인정시간 기본값", "expected": "20", "result": "passed", "timestamp": "2026-07-07T17:35:05.000Z" }
+  ],
+  "verdict": "passed"
+}

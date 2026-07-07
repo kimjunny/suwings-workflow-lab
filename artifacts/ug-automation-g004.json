@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "browser-automation",
+  "tool": "gjc browser (headless chromium)",
+  "baseUrl": "http://localhost:3000",
+  "actions": [
+    { "type": "login", "selector": "button[data-role=professor-quick]", "target": "담당교수 김희진", "result": "authenticated", "timestamp": "2026-07-07T17:27:00.000Z" },
+    { "type": "assert", "selector": "[data-testid=pending-tasks-panel]", "target": "처리대기 패널", "expected": "표시(비학생), 카드: 계획서/보고서/토익/봉사 대기 카운트", "result": "passed(봉사 1차 승인 대기 1)", "timestamp": "2026-07-07T17:27:03.000Z" },
+    { "type": "click", "selector": "[data-testid=pending-card-vol]", "target": "봉사 대기 카드", "result": "useNavigate → /volunteer", "timestamp": "2026-07-07T17:27:05.000Z" },
+    { "type": "login", "selector": "button[data-role=staff-quick]", "target": "행정실 박행정", "result": "authenticated", "timestamp": "2026-07-07T17:27:30.000Z" },
+    { "type": "assert", "selector": "[data-testid=pending-tasks-panel]", "target": "STAFF 패널", "expected": "코멘트 미작성 요약 카드 표시", "result": "passed", "timestamp": "2026-07-07T17:27:33.000Z" },
+    { "type": "login", "selector": "button[data-role=student-quick]", "target": "학생 김지혜", "result": "authenticated; 패널 미표시(학생)", "timestamp": "2026-07-07T17:32:00.000Z" },
+    { "type": "click", "selector": "[data-testid=msg-open]", "target": "담당교수께 쪽지", "result": "modal", "timestamp": "2026-07-07T17:32:05.000Z" },
+    { "type": "fill", "selector": "[data-testid=msg-professor]", "target": "받는 교수", "value": "김희진", "result": "set", "timestamp": "2026-07-07T17:32:07.000Z" },
+    { "type": "fill", "selector": "[data-testid=msg-body]", "target": "내용", "value": "교수님, 계획서 승인 부탁드립니다.", "result": "set", "timestamp": "2026-07-07T17:32:09.000Z" },
+    { "type": "click", "selector": "[data-testid=msg-send]", "target": "보내기", "result": "SEND_MESSAGE dispatched", "timestamp": "2026-07-07T17:32:11.000Z" },
+    { "type": "login", "selector": "button[data-role=professor-quick]", "target": "담당교수 김희진", "result": "authenticated", "timestamp": "2026-07-07T17:33:50.000Z" },
+    { "type": "assert", "selector": "[data-testid=notif-count]", "target": "배지", "expected": "1", "result": "passed", "timestamp": "2026-07-07T17:33:52.000Z" },
+    { "type": "click", "selector": "[data-testid=notif-bell]", "target": "알림", "result": "[data-testid=msg-section]='학생 쪽지 (1)', msg-item=김지혜 쪽지", "timestamp": "2026-07-07T17:33:54.000Z" }
+  ],
+  "verdict": "passed"
+}

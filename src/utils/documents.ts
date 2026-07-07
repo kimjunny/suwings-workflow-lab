@@ -1,6 +1,7 @@
 import { DeptProgramRecord, DocumentKind, VolunteerRecord } from '../types';
 import { SignatureImg } from '../store/settingsStore';
 import { triggerDownload } from './download';
+import { downloadHwpx } from './hwp';
 
 type DocumentRecord = DeptProgramRecord | VolunteerRecord;
 
@@ -145,41 +146,58 @@ function documentLabel(kind: DocumentKind): string {
   return kind === 'application' ? '신청서' : '결과보고서';
 }
 
-function recordRows(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): string[] {
-  const rows = [
-    paragraph('문서', documentLabel(kind)),
-    paragraph('프로그램 유형', record.programType),
-    paragraph('프로그램명', record.title),
-    paragraph('학생', `${record.name} (${record.studentId})`),
-    paragraph('학년', record.grade),
-    paragraph('연도/학기', `${record.year} / ${record.semester}`),
-    paragraph('담당교수', record.professor),
-    paragraph('인정시간', record.recognizedHours),
-    paragraph('진행상태', record.status),
-    paragraph('최종 승인일', 'finalApprovalDate' in record ? record.finalApprovalDate : '-'),
-    paragraph('행정실 코멘트', record.adminComment),
-    paragraph('신청서 전송 상태', record.documentStatus?.application),
-    paragraph('결과보고서 전송 상태', record.documentStatus?.result),
+interface FieldRow {
+  label: string;
+  value: string;
+}
+
+function fmt(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '-';
+  return String(value);
+}
+
+function recordFieldRows(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): FieldRow[] {
+  const rows: FieldRow[] = [
+    { label: '문서', value: documentLabel(kind) },
+    { label: '프로그램 유형', value: fmt(record.programType) },
+    { label: '프로그램명', value: fmt(record.title) },
+    { label: '학생', value: `${record.name} (${record.studentId})` },
+    { label: '학년', value: fmt(record.grade) },
+    { label: '연도/학기', value: `${record.year} / ${record.semester}` },
+    { label: '담당교수', value: fmt(record.professor) },
+    { label: '인정시간', value: fmt(record.recognizedHours) },
+    { label: '진행상태', value: fmt(record.status) },
+    { label: '최종 승인일', value: 'finalApprovalDate' in record ? fmt(record.finalApprovalDate) : '-' },
+    { label: '행정실 코멘트', value: fmt(record.adminComment) },
+    { label: '신청서 전송 상태', value: fmt(record.documentStatus?.application) },
+    { label: '결과보고서 전송 상태', value: fmt(record.documentStatus?.result) },
   ];
 
   if ('teamMembers' in record) {
     rows.push(
-      paragraph('팀 구성원', record.teamMembers.map((m) => `${m.name}(${m.studentId})`).join(', ')),
-      paragraph('계획서', record.plan),
-      paragraph('보고서 파일', record.reportFile?.name),
-      paragraph('포스터 확인', record.posterSubmitted ? '제출' : '미제출'),
+      { label: '팀 구성원', value: fmt(record.teamMembers.map((m) => `${m.name}(${m.studentId})`).join(', ')) },
+      { label: '계획서', value: fmt(record.plan) },
+      { label: '보고서 파일', value: fmt(record.reportFile?.name) },
+      { label: '포스터 확인', value: record.posterSubmitted ? '제출' : '미제출' },
     );
   } else {
-    rows.push(paragraph('누적 봉사시간', record.accumulatedHours), paragraph('봉사 인증서', record.certFile?.name));
+    rows.push(
+      { label: '누적 봉사시간', value: fmt(record.accumulatedHours) },
+      { label: '봉사 인증서', value: fmt(record.certFile?.name) },
+    );
   }
 
   rows.push(
-    paragraph('서명 등록 교수', signature?.professorName),
-    paragraph('서명 파일', signature?.fileName),
-    paragraph('서명 등록일', signature?.uploadedAt ? new Date(signature.uploadedAt).toLocaleString('ko-KR') : ''),
+    { label: '서명 등록 교수', value: fmt(signature?.professorName) },
+    { label: '서명 파일', value: fmt(signature?.fileName) },
+    { label: '서명 등록일', value: signature?.uploadedAt ? new Date(signature.uploadedAt).toLocaleString('ko-KR') : '-' },
   );
 
   return rows;
+}
+
+function recordRows(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): string[] {
+  return recordFieldRows(record, kind, signature).map((r) => paragraph(r.label, r.value));
 }
 
 export function createRecordDocxBlob(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): Blob {
@@ -203,4 +221,34 @@ export function createRecordDocxBlob(record: DocumentRecord, kind: DocumentKind,
 export function downloadRecordDocx(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): void {
   const safe = `${record.studentId}-${record.name}-${documentLabel(kind)}`.replace(/[\\/:*?"<>|]/g, '_');
   triggerDownload(createRecordDocxBlob(record, kind, signature), `${safe}.docx`);
+}
+
+// ── HWP(HWPX) 변환 ──────────────────────────────────────────────
+// 서버에는 HWP 바이너리를 저장하지 않는다. 레코드(텍스트/JSON)만 저장하고,
+// 다운로드 시점에 마크다운으로 직렬화 → 서버(kordoc)에서 HWPX를 즉석 생성한다.
+
+const mdCell = (value: string): string => value.replace(/\|/g, '\\|').replace(/\r?\n+/g, ' ').trim() || '-';
+
+export function recordToMarkdown(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): string {
+  const rows = recordFieldRows(record, kind, signature);
+  const lines: string[] = [
+    `# ${record.programType} ${documentLabel(kind)}`,
+    '',
+    '| 항목 | 내용 |',
+    '| --- | --- |',
+    ...rows.map((r) => `| ${mdCell(r.label)} | ${mdCell(r.value)} |`),
+    '',
+  ];
+
+  if ('plan' in record && record.plan?.trim()) {
+    lines.push(kind === 'result' ? '## 결과 요약' : '## 계획 내용', '', record.plan.trim(), '');
+  }
+
+  return lines.join('\n').trim() + '\n';
+}
+
+export async function downloadRecordHwpx(record: DocumentRecord, kind: DocumentKind, signature?: SignatureImg): Promise<void> {
+  const safe = `${record.studentId}-${record.name}-${documentLabel(kind)}`;
+  const preset = kind === 'application' ? '계획서' : '보고서';
+  await downloadHwpx(recordToMarkdown(record, kind, signature), safe, preset);
 }

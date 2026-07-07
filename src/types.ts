@@ -71,6 +71,17 @@ export interface EmailNotification {
   read: boolean;
 }
 
+// 학생 → 담당교수 쪽지 (목업)
+export interface Message {
+  id: string;
+  fromId: string;       // 보낸 학생 학번
+  fromName: string;     // 보낸 학생 이름
+  toProfessor: string;  // 수신 교수 이름
+  body: string;
+  createdAt: string;
+  read: boolean;
+}
+
 interface RecordBase {
   id: string;
   grade: string;

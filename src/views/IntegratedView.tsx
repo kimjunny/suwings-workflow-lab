@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
 import { canView } from '../auth/roles';
-import { AnyRecord, ProgramType, User } from '../types';
+import { AnyRecord, ProgramType, User, Message } from '../types';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -11,9 +11,11 @@ import Modal from '../components/ui/Modal';
 import HistoryList from '../components/HistoryList';
 import { Eye, Gamepad2, Rocket } from 'lucide-react';
 import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
-import { FieldGroup, Input, Select } from '../components/ui/Field';
+import { FieldGroup, Input, Select, Textarea } from '../components/ui/Field';
 import { matchText } from '../utils/filters';
 import { useToast } from '../components/ui/Toast';
+import { PROFESSORS } from '../data/seed';
+import PendingTasksPanel from '../components/PendingTasksPanel';
 
 interface Row {
   id: string;
@@ -430,6 +432,7 @@ export default function IntegratedView() {
   const [statuses, setStatuses] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>('latest-desc');
   const [detail, setDetail] = useState<AnyRecord | null>(null);
+  const [msgOpen, setMsgOpen] = useState(false);
 
   const all: Row[] = useMemo(() => {
     const merged: AnyRecord[] = [...state.dept, ...state.toeic, ...state.volunteer];
@@ -519,6 +522,13 @@ export default function IntegratedView() {
       </div>
       {isStudent && user && <GraduationCalculator user={user} />}
       {isStudent && <StudentGalagaShortcut />}
+      {!isStudent && <PendingTasksPanel />}
+      {isStudent && (
+        <div className="flex justify-end mb-2">
+          <Button variant="secondary" size="sm" onClick={() => setMsgOpen(true)} data-testid="msg-open">담당교수께 쪽지</Button>
+        </div>
+      )}
+      {msgOpen && user && <MessageModal user={user} onClose={() => setMsgOpen(false)} />}
 
       {/* SU-WINGs 연청색 격자형 조회 조건 테이블 */}
       <div className="border border-[#a6b9d0] mb-3">
@@ -743,5 +753,52 @@ function DetailRow({ k, v }: { k: string; v: React.ReactNode }) {
       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider w-24 shrink-0 pt-0.5">{k}</span>
       <span className="text-sm text-slate-700">{v}</span>
     </div>
+  );
+}
+
+function MessageModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const { dispatch } = useRecords();
+  const { toast } = useToast();
+  const [professor, setProfessor] = useState(PROFESSORS[0]);
+  const [body, setBody] = useState('');
+
+  const send = () => {
+    if (!professor.trim() || !body.trim()) {
+      toast('받는 교수와 내용을 입력하세요.', 'error');
+      return;
+    }
+    const message: Message = {
+      id: `msg-${Date.now()}`,
+      fromId: user.studentId ?? '',
+      fromName: user.name,
+      toProfessor: professor.trim(),
+      body: body.trim(),
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    dispatch({ type: 'SEND_MESSAGE', message });
+    toast(`${professor.trim()} 교수님께 쪽지를 보냈습니다.`, 'success');
+    onClose();
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="담당교수께 쪽지 보내기"
+      footer={<><Button variant="secondary" onClick={onClose}>취소</Button><Button onClick={send} data-testid="msg-send">보내기</Button></>}
+    >
+      <div className="flex flex-col gap-4">
+        <FieldGroup label="받는 교수">
+          <Input list="msg-professor-options" value={professor} onChange={(e) => setProfessor(e.target.value)} placeholder="교수명 검색 또는 직접입력" data-testid="msg-professor" />
+          <datalist id="msg-professor-options">
+            {PROFESSORS.map((p) => <option key={p} value={p} />)}
+          </datalist>
+        </FieldGroup>
+        <FieldGroup label="내용">
+          <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="쪽지 내용을 입력하세요" data-testid="msg-body" />
+        </FieldGroup>
+      </div>
+    </Modal>
   );
 }

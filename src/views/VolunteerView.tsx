@@ -5,9 +5,9 @@ import { can, canView, canStudentEdit, isFinalApproved } from '../auth/roles';
 import { VolunteerRecord } from '../types';
 import { PROFESSORS } from '../data/seed';
 import { accumulatedApprovedHours, volunteerPercent } from '../utils/volunteer';
-import { matchText } from '../utils/filters';
+import { matchText, compareValues, SortDir } from '../utils/filters';
 import { openFile, downloadFile } from '../utils/download';
-import { downloadRecordDocx } from '../utils/documents';
+import { downloadRecordDocx, downloadRecordHwpx } from '../utils/documents';
 import { useSettings } from '../store/settingsStore';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
@@ -43,6 +43,8 @@ export default function VolunteerView() {
   const [fStatus, setFStatus] = useState('전체');
   const [fYearFrom, setFYearFrom] = useState('');
   const [fYearTo, setFYearTo] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const visible = useMemo(
     () => state.volunteer.filter((r) => (user ? canView(user, r) : false)),
@@ -73,6 +75,26 @@ export default function VolunteerView() {
   const actor = { name: user.name, role: user.role };
 
   const accHours = (studentId: string) => accumulatedApprovedHours(state.volunteer, studentId);
+
+  const sortAccessors: Record<string, (r: VolunteerRecord) => string | number> = {
+    title: (r) => r.title,
+    grade: (r) => r.grade,
+    studentId: (r) => r.studentId,
+    name: (r) => r.name,
+    year: (r) => Number(r.year),
+    recognizedHours: (r) => r.recognizedHours,
+    status: (r) => r.status,
+  };
+  const sortedRows = useMemo(() => {
+    if (!sortKey || !sortAccessors[sortKey]) return rows;
+    const acc = sortAccessors[sortKey];
+    return rows.slice().sort((a, b) => compareValues(acc(a), acc(b), sortDir));
+  }, [rows, sortKey, sortDir]);
+  const onSort = (key: string) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+  const sortArrow = (key: string) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -155,13 +177,21 @@ export default function VolunteerView() {
       <Table>
         <THead>
           {canBulk && <Th><input type="checkbox" checked={allChecked} onChange={toggleAll} aria-label="전체 선택" data-testid="vol-check-all" /></Th>}
-          <Th>봉사활동명</Th><Th>학년</Th><Th>학번</Th><Th>이름</Th><Th>연도</Th><Th>학기</Th><Th>인정시간</Th><Th>진행상태</Th><Th>학과장 검토/승인</Th><Th>최종 승인일</Th><Th>누적 봉사시간</Th><Th>인증서</Th><Th></Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('title')}>봉사활동명{sortArrow('title')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('grade')}>학년{sortArrow('grade')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('studentId')}>학번{sortArrow('studentId')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('name')}>이름{sortArrow('name')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('year')}>연도{sortArrow('year')}</Th>
+          <Th>학기</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('recognizedHours')}>인정시간{sortArrow('recognizedHours')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('status')}>진행상태{sortArrow('status')}</Th>
+          <Th>학과장 검토/승인</Th><Th>최종 승인일</Th><Th>누적 봉사시간</Th><Th>인증서</Th><Th></Th>
         </THead>
         <tbody data-testid="vol-tbody">
-          {rows.length === 0 ? (
+          {sortedRows.length === 0 ? (
             <TableEmpty colSpan={canBulk ? 14 : 13} message="등록된 봉사활동이 없습니다." />
           ) : (
-            rows.map((r) => (
+            sortedRows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                 {canBulk && <Td><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`${r.title} 선택`} /></Td>}
                 <Td className="text-slate-800 font-medium">{r.title}</Td>
@@ -191,7 +221,7 @@ export default function VolunteerView() {
           )}
         </tbody>
       </Table>
-      <p className="text-sm text-slate-500 mt-3">총 {rows.length}건</p>
+      <p className="text-sm text-slate-500 mt-3">총 {sortedRows.length}건</p>
 
       {createOpen && <CreateModal onClose={() => setCreateOpen(false)} />}
       {current && <DetailModal record={current} onClose={() => setDetail(null)} />}
@@ -206,7 +236,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [semester, setSemester] = useState('2학기');
   const [professor, setProfessor] = useState(PROFESSORS[0]);
-  const [hours, setHours] = useState('8');
+  const [hours, setHours] = useState('20');
   if (!user) return null;
 
   const submit = () => {
@@ -256,6 +286,18 @@ function DetailModal({ record, onClose }: { record: VolunteerRecord; onClose: ()
   const documentButton = (kind: 'application' | 'result', label: string) => (
     <>
       <Button variant="secondary" size="sm" onClick={() => downloadRecordDocx(record, kind, signature)}>{label} 다운로드</Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() =>
+          downloadRecordHwpx(record, kind, signature).then(
+            () => toast(`${label} HWP 다운로드`, 'success'),
+            (e) => toast(e instanceof Error ? e.message : 'HWP 변환 실패', 'error'),
+          )
+        }
+      >
+        {label} HWP
+      </Button>
       <Button
         variant="ghost"
         size="sm"

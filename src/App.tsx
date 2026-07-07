@@ -6,6 +6,7 @@ import AppShell from './components/layout/AppShell';
 import LoginView from './views/LoginView';
 import IntegratedView from './views/IntegratedView';
 import StudentSubmitView from './views/StudentSubmitView';
+import PlanFormView from './views/PlanFormView';
 import DeptProgramView from './views/DeptProgramView';
 import BoardView from './views/BoardView';
 import ToeicView from './views/ToeicView';
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/integrated" element={<ProtectedRoute view="integrated"><IntegratedView /></ProtectedRoute>} />
         <Route path="/submit" element={<ProtectedRoute view="submit"><StudentSubmitView /></ProtectedRoute>} />
+        <Route path="/form" element={<ProtectedRoute view="form"><PlanFormView /></ProtectedRoute>} />
         <Route path="/board" element={<ProtectedRoute view="board"><BoardView /></ProtectedRoute>} />
         <Route path="/dept" element={<ProtectedRoute view="dept"><DeptProgramView /></ProtectedRoute>} />
         <Route path="/toeic" element={<ProtectedRoute view="toeic"><ToeicView /></ProtectedRoute>} />

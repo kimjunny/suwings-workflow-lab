@@ -9,6 +9,7 @@ import {
   FileMeta,
   HistoryEntry,
   EmailNotification,
+  Message,
   AnyRecord,
 } from '../types';
 import { SEED_DEPT, SEED_TOEIC, SEED_VOLUNTEER } from '../data/seed';
@@ -20,6 +21,7 @@ export interface RecordsState {
   toeic: ToeicRecord[];
   volunteer: VolunteerRecord[];
   notifications: EmailNotification[];
+  messages: Message[];
 }
 
 const initialSeed = (): RecordsState => ({
@@ -27,6 +29,7 @@ const initialSeed = (): RecordsState => ({
   toeic: SEED_TOEIC,
   volunteer: SEED_VOLUNTEER,
   notifications: [],
+  messages: [],
 });
 
 function loadInitial(): RecordsState {
@@ -35,7 +38,7 @@ function loadInitial(): RecordsState {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<RecordsState>;
-      return { ...initialSeed(), ...parsed, notifications: parsed.notifications ?? [] };
+      return { ...initialSeed(), ...parsed, notifications: parsed.notifications ?? [], messages: parsed.messages ?? [] };
     }
   } catch {
     /* ignore */
@@ -72,6 +75,9 @@ export type Action =
   | { type: 'SET_DOCUMENT_STATUS'; domain: 'dept' | 'volunteer'; id: string; kind: 'application' | 'result'; actor: Actor }
   | { type: 'NOTIFY_PROFESSOR'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; actor: Actor }
   | { type: 'MARK_NOTIFICATIONS_READ' }
+  | { type: 'REASSIGN_PROFESSOR'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; professor: string; actor: Actor }
+  | { type: 'SEND_MESSAGE'; message: Message }
+  | { type: 'MARK_MESSAGES_READ'; professor: string }
   | { type: 'RESET' };
 
 const now = () => new Date().toISOString().slice(0, 19);
@@ -310,6 +316,19 @@ function coreReducer(state: RecordsState, action: Action): RecordsState {
     }
     case 'MARK_NOTIFICATIONS_READ':
       return { ...state, notifications: state.notifications.map((n) => (n.read ? n : { ...n, read: true })) };
+    case 'REASSIGN_PROFESSOR': {
+      const patch = <T extends { professor: string; history: HistoryEntry[] }>(r: T): T => {
+        if (r.professor === action.professor) return r;
+        return { ...r, professor: action.professor, history: [...r.history, entry(`담당교수 변경: ${r.professor || '미지정'} → ${action.professor}`, action.actor)] };
+      };
+      if (action.domain === 'dept') return mutDept(state, action.id, patch);
+      if (action.domain === 'toeic') return mutToeic(state, action.id, patch);
+      return mutVol(state, action.id, patch);
+    }
+    case 'SEND_MESSAGE':
+      return { ...state, messages: [action.message, ...state.messages] };
+    case 'MARK_MESSAGES_READ':
+      return { ...state, messages: state.messages.map((m) => (m.toProfessor === action.professor && !m.read ? { ...m, read: true } : m)) };
     case 'RESET':
       return initialSeed();
     default:

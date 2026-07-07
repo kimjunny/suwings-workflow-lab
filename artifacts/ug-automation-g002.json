@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "browser-automation",
+  "tool": "gjc browser (headless chromium)",
+  "baseUrl": "http://localhost:3000",
+  "actions": [
+    { "type": "login", "selector": "button[data-role=professor-quick]", "target": "담당교수 김희진", "result": "authenticated", "timestamp": "2026-07-07T17:28:00.000Z" },
+    { "type": "open", "selector": "/dept", "target": "학과내 목록", "result": "loaded", "timestamp": "2026-07-07T17:28:05.000Z" },
+    { "type": "assert", "selector": "[data-testid^=dept-expand-]", "target": "팀 펼침 토글", "expected": "존재(팀원 있는 행)", "result": "passed", "timestamp": "2026-07-07T17:28:07.000Z" },
+    { "type": "click", "selector": "[data-testid=dept-expand-d1]", "target": "신약개발 연구 세미나 펼침", "result": "팀원 하위행 2개 표시(이우진, 박소영)", "timestamp": "2026-07-07T17:28:09.000Z" },
+    { "type": "assert", "selector": "[data-testid^=dept-teammember-]", "target": "teammember rows", "expected": "teamBefore=0 → teamAfter=2", "result": "passed", "timestamp": "2026-07-07T17:28:10.000Z" },
+    { "type": "open", "selector": "[data-testid=dept-detail-d3]", "target": "임상약학(보고서 접수, reportFile 세팅)", "result": "detail modal", "timestamp": "2026-07-07T17:29:00.000Z" },
+    { "type": "assert", "selector": "[data-testid=dept-poster-check]", "target": "포스터 체크박스", "expected": "disabled=true (열람 전)", "result": "passed", "timestamp": "2026-07-07T17:29:02.000Z" },
+    { "type": "assert", "selector": "[data-testid=approve-report]", "target": "담당승인 버튼", "expected": "disabled=true (열람 전)", "result": "passed", "timestamp": "2026-07-07T17:29:03.000Z" },
+    { "type": "assert", "selector": "[data-testid=dept-report-open-required]", "target": "열람 필요 안내", "expected": "표시됨", "result": "passed", "timestamp": "2026-07-07T17:29:04.000Z" },
+    { "type": "click", "selector": "[data-testid=dept-report-open]", "target": "보고서 열기", "result": "reportOpened=true, 새 탭 오픈", "timestamp": "2026-07-07T17:29:06.000Z" },
+    { "type": "assert", "selector": "[data-testid=dept-poster-check]", "target": "포스터 체크박스", "expected": "disabled=false (열람 후)", "result": "passed", "timestamp": "2026-07-07T17:29:08.000Z" },
+    { "type": "login", "selector": "button[data-role=staff-quick]", "target": "행정실 박행정", "result": "authenticated", "timestamp": "2026-07-07T17:34:20.000Z" },
+    { "type": "open", "selector": "[data-testid=dept-detail-d4]", "target": "상세", "result": "professor=박선영", "timestamp": "2026-07-07T17:34:30.000Z" },
+    { "type": "fill", "selector": "[data-testid=dept-reassign-input]", "target": "담당교수 재지정", "value": "김희진", "result": "set", "timestamp": "2026-07-07T17:34:33.000Z" },
+    { "type": "click", "selector": "[data-testid=dept-reassign-save]", "target": "저장", "result": "professor=김희진, status 불변, 이력 append", "timestamp": "2026-07-07T17:34:35.000Z" }
+  ],
+  "verdict": "passed"
+}

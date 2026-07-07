@@ -4,7 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import { can, canView, canStudentEdit } from '../auth/roles';
 import { DeptProgramRecord, TeamMember } from '../types';
 import { PROFESSORS } from '../data/seed';
-import { downloadRecordDocx } from '../utils/documents';
+import { downloadRecordDocx, downloadRecordHwpx } from '../utils/documents';
+import { openFile, downloadFile } from '../utils/download';
 import { useSettings } from '../store/settingsStore';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
@@ -16,7 +17,7 @@ import HistoryList from '../components/HistoryList';
 import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
 import { FieldGroup, Input, Textarea, Select } from '../components/ui/Field';
 import { useToast } from '../components/ui/Toast';
-import { Plus, Trash2, Eye } from 'lucide-react';
+import { Plus, Trash2, Eye, ChevronRight, ChevronDown } from 'lucide-react';
 
 export default function DeptProgramView() {
   const { state, dispatch } = useRecords();
@@ -24,6 +25,13 @@ export default function DeptProgramView() {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [detail, setDetail] = useState<DeptProgramRecord | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const rows = useMemo(
     () =>
@@ -47,15 +55,31 @@ export default function DeptProgramView() {
 
       <Table>
         <THead>
-          <Th>제목</Th><Th>학번</Th><Th>이름</Th><Th>학기</Th><Th>인정시간</Th><Th>담당교수</Th><Th>진행상태</Th><Th>비고</Th><Th>최종 승인일</Th><Th></Th>
+          <Th className="w-8"></Th><Th>제목</Th><Th>학번</Th><Th>이름</Th><Th>학기</Th><Th>인정시간</Th><Th>담당교수</Th><Th>진행상태</Th><Th>비고</Th><Th>최종 승인일</Th><Th></Th>
         </THead>
         <tbody data-testid="dept-tbody">
           {rows.length === 0 ? (
-            <TableEmpty colSpan={10} message="등록된 학과내 비교과가 없습니다." />
+            <TableEmpty colSpan={11} message="등록된 학과내 비교과가 없습니다." />
           ) : (
-            rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                <Td className="text-slate-800 font-medium">{r.title}</Td>
+            rows.map((r) => {
+              const hasTeam = r.teamMembers.length > 0;
+              const isOpen = expanded.has(r.id);
+              return (
+              <React.Fragment key={r.id}>
+              <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <Td>
+                  {hasTeam ? (
+                    <button
+                      onClick={() => toggleExpand(r.id)}
+                      className="text-slate-400 hover:text-slate-700"
+                      aria-label={isOpen ? '팀원 접기' : '팀원 펼치기'}
+                      data-testid={`dept-expand-${r.id}`}
+                    >
+                      {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+                  ) : null}
+                </Td>
+                <Td className="text-slate-800 font-medium">{r.title}{hasTeam && <span className="ml-1 text-[10px] text-slate-400">팀 {r.teamMembers.length + 1}명</span>}</Td>
                 <Td className="text-slate-600">{r.studentId}</Td>
                 <Td className="text-slate-700">{r.name}</Td>
                 <Td className="text-slate-600">{r.semester}</Td>
@@ -68,7 +92,18 @@ export default function DeptProgramView() {
                   <Button variant="ghost" size="sm" onClick={() => setDetail(r)} data-testid={`dept-detail-${r.id}`}><Eye size={14} /> 상세</Button>
                 </Td>
               </tr>
-            ))
+              {isOpen && hasTeam && r.teamMembers.map((m, i) => (
+                <tr key={`${r.id}-tm-${i}`} className="border-b border-slate-50 bg-slate-50/50 text-xs" data-testid={`dept-teammember-${r.id}`}>
+                  <Td></Td>
+                  <Td className="pl-8 text-slate-500">└ 팀원</Td>
+                  <Td className="text-slate-600">{m.studentId}</Td>
+                  <Td className="text-slate-700">{m.name}</Td>
+                  <td colSpan={7}></td>
+                </tr>
+              ))}
+              </React.Fragment>
+              );
+            })
           )}
         </tbody>
       </Table>
@@ -196,6 +231,8 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
   const [professorComment, setProfessorComment] = useState(record.professorComment);
   const [reject, setReject] = useState(false);
   const [cancel, setCancel] = useState(false);
+  const [reportOpened, setReportOpened] = useState(false);
+  const [professorEdit, setProfessorEdit] = useState(record.professor);
   const actor = user ? { name: user.name, role: user.role } : null;
   if (!user || !actor) return null;
 
@@ -208,6 +245,18 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
   const documentButton = (kind: 'application' | 'result', label: string) => (
     <>
       <Button variant="secondary" size="sm" onClick={() => downloadRecordDocx(record, kind, signature)}>{label} 다운로드</Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() =>
+          downloadRecordHwpx(record, kind, signature).then(
+            () => toast(`${label} HWP 다운로드`, 'success'),
+            (e) => toast(e instanceof Error ? e.message : 'HWP 변환 실패', 'error'),
+          )
+        }
+      >
+        {label} HWP
+      </Button>
       <Button
         variant="ghost"
         size="sm"
@@ -268,8 +317,14 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
                 }}
               />
             ) : record.reportFile ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                {record.reportFile.name}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 flex items-center justify-between gap-2">
+                <span className="truncate">{record.reportFile.name}</span>
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" data-testid="dept-report-open"
+                    onClick={() => { openFile(record.reportFile!); setReportOpened(true); }}>열기</Button>
+                  <Button variant="ghost" size="sm" data-testid="dept-report-download"
+                    onClick={() => { downloadFile(record.reportFile!); setReportOpened(true); }}>다운로드</Button>
+                </div>
               </div>
             ) : (
               <p className="text-xs text-slate-400">아직 보고서가 제출되지 않았습니다.</p>
@@ -293,20 +348,25 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
               </Button>
             )}
             {record.status === '보고서 접수' && can(user, 'approve_report', record) && (
-              <label className="flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={hasPoster}
-                  onChange={(e) => act(() => dispatch({ type: 'SET_POSTER_SUBMITTED', id: record.id, checked: e.target.checked, actor }), e.target.checked ? '포스터 제출을 확인했습니다.' : '포스터 제출 확인을 해제했습니다.')}
-                />
-                결과보고서 첫 페이지 포스터 제출 여부 확인
-              </label>
-            )}
-            {record.status === '보고서 접수' && can(user, 'approve_report', record) && (
-              <Button variant="success" size="sm" data-testid="approve-report" disabled={!hasPoster}
-                onClick={() => act(() => dispatch({ type: 'APPROVE_REPORT_PROFESSOR', id: record.id, comment: professorComment, actor }), '보고서를 담당승인했습니다.')}>
-                보고서 담당승인
-              </Button>
+              <>
+                {!reportOpened && (
+                  <p className="w-full text-xs text-amber-700" data-testid="dept-report-open-required">먼저 제출된 보고서 파일을 열람해야 포스터 확인 및 담당승인이 가능합니다.</p>
+                )}
+                <label className={`flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-slate-700 ${!reportOpened ? 'opacity-50' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={hasPoster}
+                    disabled={!reportOpened}
+                    data-testid="dept-poster-check"
+                    onChange={(e) => act(() => dispatch({ type: 'SET_POSTER_SUBMITTED', id: record.id, checked: e.target.checked, actor }), e.target.checked ? '포스터 제출을 확인했습니다.' : '포스터 제출 확인을 해제했습니다.')}
+                  />
+                  결과보고서 첫 페이지 포스터 제출 여부 확인
+                </label>
+                <Button variant="success" size="sm" data-testid="approve-report" disabled={!hasPoster || !reportOpened}
+                  onClick={() => act(() => dispatch({ type: 'APPROVE_REPORT_PROFESSOR', id: record.id, comment: professorComment, actor }), '보고서를 담당승인했습니다.')}>
+                  보고서 담당승인
+                </Button>
+              </>
             )}
             {record.status === '보고서 담당승인' && can(user, 'approve_final', record) && (
               <Button variant="success" size="sm" data-testid="approve-final"
@@ -330,6 +390,19 @@ function DetailModal({ record, onClose }: { record: DeptProgramRecord; onClose: 
                 <div className="flex gap-2">
                   <Input value={adminComment} onChange={(e) => setAdminComment(e.target.value)} placeholder="비고 코멘트 입력" />
                   <Button size="sm" onClick={() => act(() => dispatch({ type: 'SET_ADMIN_COMMENT', domain: 'dept', id: record.id, comment: adminComment, actor }), '코멘트를 저장했습니다.')}>저장</Button>
+                </div>
+              </div>
+            )}
+            {can(user, 'reassign_professor', record) && (
+              <div className="w-full mt-2">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">담당교수 재지정</p>
+                <div className="flex gap-2">
+                  <Input list="dept-reassign-professors" value={professorEdit} onChange={(e) => setProfessorEdit(e.target.value)} placeholder="교수명 검색 또는 직접입력" data-testid="dept-reassign-input" />
+                  <datalist id="dept-reassign-professors">
+                    {PROFESSORS.map((p) => <option key={p} value={p} />)}
+                  </datalist>
+                  <Button size="sm" data-testid="dept-reassign-save" disabled={!professorEdit.trim() || professorEdit.trim() === record.professor}
+                    onClick={() => act(() => dispatch({ type: 'REASSIGN_PROFESSOR', domain: 'dept', id: record.id, professor: professorEdit.trim(), actor }), '담당교수를 재지정했습니다.')}>저장</Button>
                 </div>
               </div>
             )}

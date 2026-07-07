@@ -3,6 +3,7 @@ import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
 import { can, canView, canStudentEdit, isFinalApproved } from '../auth/roles';
 import { ToeicRecord, SimpleStatus } from '../types';
+import { compareValues, SortDir } from '../utils/filters';
 import { PROFESSORS } from '../data/seed';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
@@ -13,7 +14,7 @@ import HistoryList from '../components/HistoryList';
 import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
 import { FieldGroup, Input, Select } from '../components/ui/Field';
 import { useToast } from '../components/ui/Toast';
-import { Plus, Info, RotateCcw } from 'lucide-react';
+import { Plus, Info, RotateCcw, ExternalLink } from 'lucide-react';
 
 const MIN_SCORE = 700;
 const readyForFirst = (r: ToeicRecord) => r.status === '접수' || r.status === '검토중' || r.status === '반려';
@@ -43,6 +44,8 @@ export default function ToeicView() {
   const [detail, setDetail] = useState<ToeicRecord | null>(null);
   const [filter, setFilter] = useState<SearchFilter>(EMPTY_FILTER);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const visibleRows = useMemo(
     () => state.toeic.filter((r) => (user ? canView(user, r) : false)).slice().sort((a, b) => (a.lastUpdate < b.lastUpdate ? 1 : -1)),
@@ -60,6 +63,25 @@ export default function ToeicView() {
       return true;
     });
   }, [visibleRows, filter]);
+
+  const sortAccessors: Record<string, (r: ToeicRecord) => string | number> = {
+    grade: (r) => r.grade,
+    studentId: (r) => r.studentId,
+    name: (r) => r.name,
+    testDate: (r) => r.testDate,
+    totalScore: (r) => r.totalScore,
+    status: (r) => r.status,
+  };
+  const sortedRows = useMemo(() => {
+    if (!sortKey || !sortAccessors[sortKey]) return filteredRows;
+    const acc = sortAccessors[sortKey];
+    return filteredRows.slice().sort((a, b) => compareValues(acc(a), acc(b), sortDir));
+  }, [filteredRows, sortKey, sortDir]);
+  const onSort = (key: string) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+  const sortArrow = (key: string) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   if (!user) return null;
   const current = detail ? state.toeic.find((r) => r.id === detail.id) ?? null : null;
@@ -243,13 +265,22 @@ export default function ToeicView() {
               />
             </Th>
           )}
-          <Th>학년</Th><Th>학번</Th><Th>이름</Th><Th>생년월일</Th><Th>응시일자</Th><Th>수험번호</Th><Th>TOTAL</Th><Th>발급번호</Th><Th>진행상태</Th><Th>최종 승인일</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('grade')}>학년{sortArrow('grade')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('studentId')}>학번{sortArrow('studentId')}</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('name')}>이름{sortArrow('name')}</Th>
+          <Th>생년월일</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('testDate')}>응시일자{sortArrow('testDate')}</Th>
+          <Th>수험번호</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('totalScore')}>TOTAL{sortArrow('totalScore')}</Th>
+          <Th>발급번호</Th>
+          <Th className="cursor-pointer select-none" onClick={() => onSort('status')}>진행상태{sortArrow('status')}</Th>
+          <Th>최종 승인일</Th>
         </THead>
         <tbody data-testid="toeic-tbody">
-          {filteredRows.length === 0 ? (
+          {sortedRows.length === 0 ? (
             <TableEmpty colSpan={showBatchBar ? 12 : 11} message="검색 결과가 없습니다." />
           ) : (
-            filteredRows.map((r) => (
+            sortedRows.map((r) => (
               <tr
                 key={r.id}
                 className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer select-none"
@@ -280,7 +311,7 @@ export default function ToeicView() {
           )}
         </tbody>
       </Table>
-      <p className="text-sm text-slate-500 mt-3">총 {filteredRows.length}건</p>
+      <p className="text-sm text-slate-500 mt-3">총 {sortedRows.length}건</p>
 
       {createOpen && <CreateModal onClose={() => setCreateOpen(false)} />}
       {current && <DetailModal record={current} onClose={() => setDetail(null)} />}
@@ -356,6 +387,9 @@ function DetailModal({ record, onClose }: { record: ToeicRecord; onClose: () => 
       </div>
 
       <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+        <a href="https://www.toeic.co.kr" target="_blank" rel="noopener noreferrer" data-testid="toeic-ybm-verify">
+          <Button variant="secondary" size="sm"><ExternalLink size={14} /> YBM 성적 조회</Button>
+        </a>
         {readyForFirst(record) && can(user, 'approve_first', record) && (
           <Button variant="success" size="sm" data-testid="toeic-approve-first"
             onClick={() => { dispatch({ type: 'APPROVE_TOEIC_PROFESSOR', id: record.id, actor }); toast('토익 성적을 1차 승인했습니다.'); }}>

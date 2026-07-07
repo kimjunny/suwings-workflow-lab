@@ -1,10 +1,10 @@
 import { Role, User, AnyRecord } from '../types';
 
 // 화면(라우트) 접근 권한: 역할 → 접근 가능한 화면 키
-export type ViewKey = 'integrated' | 'submit' | 'dept' | 'toeic' | 'volunteer' | 'stats' | 'settings' | 'board' | 'galaga';
+export type ViewKey = 'integrated' | 'submit' | 'form' | 'dept' | 'toeic' | 'volunteer' | 'stats' | 'settings' | 'board' | 'galaga';
 
 export const VIEW_ACCESS: Record<Role, ViewKey[]> = {
-  STUDENT: ['integrated', 'submit', 'dept', 'toeic', 'volunteer', 'board', 'galaga'],
+  STUDENT: ['integrated', 'submit', 'form', 'dept', 'toeic', 'volunteer', 'board', 'galaga'],
   PROFESSOR: ['integrated', 'dept', 'toeic', 'volunteer'],
   HEAD: ['integrated', 'dept', 'toeic', 'volunteer', 'stats', 'settings'],
   STAFF: ['integrated', 'dept', 'toeic', 'volunteer', 'settings'],
@@ -53,7 +53,8 @@ export type ActionKind =
   | 'approve_simple'
   | 'reject'
   | 'cancel'
-  | 'admin_comment';
+  | 'admin_comment'
+  | 'reassign_professor';
 
 export function can(user: User, action: ActionKind, record?: AnyRecord): boolean {
   const assigned = record ? isAssignedProfessor(user, record) : false;
@@ -78,6 +79,8 @@ export function can(user: User, action: ActionKind, record?: AnyRecord): boolean
       return user.role === 'HEAD' && (!record || isFinalApproved(record));
     case 'admin_comment':
       return user.role === 'STAFF';
+    case 'reassign_professor':
+      return user.role === 'STAFF' || user.role === 'HEAD';
     default:
       return false;
   }

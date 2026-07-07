@@ -9,8 +9,8 @@ export function Table({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Th({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
-  return <th className={`py-3 px-4 whitespace-nowrap ${className}`}>{children}</th>;
+export function Th({ children, className = '', onClick }: { children?: React.ReactNode; className?: string; onClick?: React.MouseEventHandler<HTMLTableCellElement> }) {
+  return <th className={`py-3 px-4 whitespace-nowrap ${className}`} onClick={onClick}>{children}</th>;
 }
 export function Td({ children, className = '', onClick }: { children?: React.ReactNode; className?: string; onClick?: React.MouseEventHandler<HTMLTableCellElement> }) {
   return <td className={`py-3 px-4 ${className}`} onClick={onClick}>{children}</td>;

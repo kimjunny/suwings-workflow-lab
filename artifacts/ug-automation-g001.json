@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "browser-automation",
+  "tool": "gjc browser (headless chromium)",
+  "baseUrl": "http://localhost:3000",
+  "actions": [
+    { "type": "login", "selector": "button[data-role=student-quick]", "target": "학생 김지혜 (20231234)", "result": "authenticated", "timestamp": "2026-07-07T17:32:00.000Z" },
+    { "type": "click", "selector": "[data-testid=msg-open]", "target": "담당교수께 쪽지", "result": "message modal opened", "timestamp": "2026-07-07T17:32:05.000Z" },
+    { "type": "fill", "selector": "[data-testid=msg-professor]", "target": "받는 교수", "value": "김희진", "result": "set", "timestamp": "2026-07-07T17:32:07.000Z" },
+    { "type": "fill", "selector": "[data-testid=msg-body]", "target": "내용", "value": "교수님, 계획서 승인 부탁드립니다.", "result": "set", "timestamp": "2026-07-07T17:32:09.000Z" },
+    { "type": "click", "selector": "[data-testid=msg-send]", "target": "보내기", "result": "message dispatched", "timestamp": "2026-07-07T17:32:11.000Z" },
+    { "type": "assert", "selector": "localStorage:bigyogwa-records-v1", "target": "messages", "expected": "[{to:김희진,from:김지혜,fromId:20231234,read:false}]", "result": "passed", "timestamp": "2026-07-07T17:32:12.000Z" },
+    { "type": "login", "selector": "button[data-role=professor-quick]", "target": "담당교수 김희진", "result": "authenticated", "timestamp": "2026-07-07T17:33:50.000Z" },
+    { "type": "assert", "selector": "[data-testid=notif-count]", "target": "badge", "expected": "1", "result": "passed", "timestamp": "2026-07-07T17:33:52.000Z" },
+    { "type": "click", "selector": "[data-testid=notif-bell]", "target": "알림", "result": "panel opened; [data-testid=msg-section]='학생 쪽지 (1)'", "timestamp": "2026-07-07T17:33:54.000Z" },
+    { "type": "login", "selector": "button[data-role=staff-quick]", "target": "행정실 박행정", "result": "authenticated", "timestamp": "2026-07-07T17:34:20.000Z" },
+    { "type": "open", "selector": "[data-testid=dept-detail-d4]", "target": "상세", "result": "detail modal; professor=박선영 status=계획서 접수", "timestamp": "2026-07-07T17:34:30.000Z" },
+    { "type": "fill", "selector": "[data-testid=dept-reassign-input]", "target": "담당교수 재지정", "value": "김희진", "result": "set", "timestamp": "2026-07-07T17:34:33.000Z" },
+    { "type": "click", "selector": "[data-testid=dept-reassign-save]", "target": "저장", "result": "dispatched REASSIGN_PROFESSOR", "timestamp": "2026-07-07T17:34:35.000Z" },
+    { "type": "assert", "selector": "localStorage:bigyogwa-records-v1", "target": "d4", "expected": "professor=김희진, status=계획서 접수(불변), history+='담당교수 변경: 박선영 → 김희진'(STAFF)", "result": "passed", "timestamp": "2026-07-07T17:34:35.500Z" },
+    { "type": "assert", "selector": "[data-testid=msg-send]", "target": "adversarial 동일교수 재지정/빈본문", "expected": "no-op / 전송 차단", "result": "passed", "timestamp": "2026-07-07T17:34:40.000Z" }
+  ],
+  "verdict": "passed"
+}

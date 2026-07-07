@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Languages, HeartHandshake, MessageSquare } from 'lucide-react';
+import { BookOpen, Languages, HeartHandshake, MessageSquare, FilePen } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 
 const CARDS = [
@@ -9,6 +9,12 @@ const CARDS = [
     title: '학과내 비교과 신청·제출',
     description: '대표학생으로 프로그램을 등록하고 팀원, 계획서, 결과보고서 PDF를 제출합니다.',
     icon: BookOpen,
+  },
+  {
+    to: '/form',
+    title: '양식 작성 (HWP 변환)',
+    description: '정해진 양식 칸에 입력하면 한컴(HWPX) 문서로 자동 변환·다운로드됩니다.',
+    icon: FilePen,
   },
   {
     to: '/toeic',
