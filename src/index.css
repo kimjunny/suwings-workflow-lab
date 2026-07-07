@@ -5,8 +5,8 @@
     font-family: "Gungsuh", "GungsuhChe", "궁서", "궁서체", serif !important;
     background-color: #ffffff !important;
     color: #333333 !important;
-    font-size: 11px !important; /* SU-WINGs 특유의 매우 좁고 빽빽한 폰트 사이즈 */
-    letter-spacing: -0.06em;
+    font-size: 14px !important; /* 원래 11px에서 14px로 대폭 인상 */
+    letter-spacing: -0.05em;
     margin: 0;
     padding: 0;
   }
@@ -233,4 +233,18 @@
 }
 .win7-btn-danger:hover {
   background-color: #c94c4c !important;
+}
+/* ==========================================
+   ★ 가독성을 위한 전역 폰트 크기 강제 증대 오버라이드
+   ========================================== */
+.text-[11px], .text-xs, .su-tree-menu, .su-form-table th, .su-form-table td, .su-grid-table th, .su-grid-table td, .text-[#666666], .text-[#999999] {
+  font-size: 13px !important; /* 좁고 답답하던 텍스트 크기를 13px로 인상 */
+}
+
+.text-sm, .text-base, .win7-btn, input, select, textarea, button {
+  font-size: 14px !important; /* 기본 입력 및 버튼 크기를 14px로 인상 */
+}
+
+.text-[10px], .text-[9px] {
+  font-size: 12px !important; /* 초소형 크기도 12px로 가독성 보정 */
 }

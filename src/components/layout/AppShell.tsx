@@ -90,10 +90,6 @@ export default function AppShell() {
         <div className="flex items-center gap-6">
           {/* 로고 */}
           <span className="text-[#10489c] font-black italic text-base tracking-tighter cursor-pointer">SU-WINGs</span>
-          {/* 접속 정보 */}
-          <span className="text-[#999999] hidden lg:inline">
-            이전 접속시각 : 2026-07-07 10:30:34, IP : 61.97.55.27
-          </span>
         </div>
       </header>
 
@@ -104,7 +100,7 @@ export default function AppShell() {
           <div className="su-header-tab-active px-4 py-1.5 cursor-pointer text-xs">서비스</div>
         </div>
         
-        {/* 부대원 정보 및 제어 단추 */}
+        {/* 사용자 정보 및 제어 단추 */}
         <div className="flex items-center gap-2 text-white">
           <span className="font-bold">{user.name} ({user.studentId ?? user.id})</span>
           <button onClick={doLogout} className="su-btn-gray font-bold">로그아웃</button>
