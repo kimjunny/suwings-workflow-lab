@@ -235,16 +235,61 @@
   background-color: #c94c4c !important;
 }
 /* ==========================================
-   ★ 가독성을 위한 전역 폰트 크기 강제 증대 오버라이드
+   ★ 가독성을 위한 전역 폰트 크기 및 두께(Bold) 대폭 증대 오버라이드
    ========================================== */
-.text-[11px], .text-xs, .su-tree-menu, .su-form-table th, .su-form-table td, .su-grid-table th, .su-grid-table td, .text-[#666666], .text-[#999999] {
-  font-size: 13px !important; /* 좁고 답답하던 텍스트 크기를 13px로 인상 */
+body {
+  font-size: 15px !important;
 }
 
-.text-sm, .text-base, .win7-btn, input, select, textarea, button {
-  font-size: 14px !important; /* 기본 입력 및 버튼 크기를 14px로 인상 */
+.su-grid-table th {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  padding: 8px 6px !important;
+  background-color: #dce6f1 !important;
+  color: #1b3c67 !important;
 }
 
-.text-[10px], .text-[9px] {
-  font-size: 12px !important; /* 초소형 크기도 12px로 가독성 보정 */
+.su-grid-table td {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  padding: 8px 6px !important;
+}
+
+.su-tree-menu a, .su-tree-item {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+.su-tab {
+  font-size: 14px !important;
+  font-weight: bold !important;
+  padding: 6px 16px !important;
+}
+
+.su-form-table th {
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  padding: 6px 8px !important;
+}
+
+.su-form-table td {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  padding: 6px 8px !important;
+}
+
+/* 그 외 모든 작은 유틸리티 서체들 강제 스케일링 및 고대비화 */
+.text-[11px], .text-xs, .text-sm, .text-[#666666], .text-[#999999], .text-slate-500, .text-slate-600 {
+  font-size: 14px !important;
+  font-weight: bold !important;
+}
+
+.text-[10px], .text-[9px], .text-xs-caption {
+  font-size: 13px !important;
+  font-weight: bold !important;
+}
+
+input, select, textarea, button, .win7-btn {
+  font-size: 14px !important;
+  font-weight: bold !important;
 }
