@@ -182,6 +182,10 @@ const toeic = (
 };
 
 export const SEED_TOEIC: ToeicRecord[] = [
+  toeic('20231234', 750, '접수', {
+    lastUpdate: '2026-07-06T10:00:00',
+    history: [h('접수', '김지혜', 'STUDENT', '2026-07-06T10:00:00')],
+  }),
   toeic('20231234', 880, '최종 승인', {
     finalApprovalDate: '2026-09-22',
     lastUpdate: '2026-09-22T11:00:00',

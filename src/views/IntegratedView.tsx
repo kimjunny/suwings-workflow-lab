@@ -12,6 +12,7 @@ import { Eye } from 'lucide-react';
 import { Table, THead, Th, Td, TableEmpty } from '../components/ui/Table';
 import { FieldGroup, Input, Select } from '../components/ui/Field';
 import { matchText } from '../utils/filters';
+import { useToast } from '../components/ui/Toast';
 
 interface Row {
   id: string;
@@ -590,7 +591,15 @@ export default function IntegratedView() {
 }
 
 
-function IntegratedDetailModal({ record, onClose }: { record: AnyRecord; onClose: () => void }) {
+function IntegratedDetailModal({ record: initialRecord, onClose }: { record: AnyRecord; onClose: () => void }) {
+  const { state, dispatch } = useRecords();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const record = useMemo(() => {
+    const list = [...state.dept, ...state.toeic, ...state.volunteer];
+    return list.find(r => r.id === initialRecord.id) || initialRecord;
+  }, [state, initialRecord]);
   const latestRejectReason = [...record.history].reverse().find((h) => h.step === '반려' && h.reason)?.reason;
   const title = record.programType === '학과내 비교과'
     ? record.title
@@ -598,8 +607,55 @@ function IntegratedDetailModal({ record, onClose }: { record: AnyRecord; onClose
       ? record.title
       : `토익 성적 · ${record.name}`;
 
+  const isStudent = user?.role === 'STUDENT';
+  const isOwn = record.studentId === user?.studentId;
+  const isPendingApproval =
+    record.programType === '학과내 비교과'
+      ? (record.status === '계획서 접수' || record.status === '보고서 접수')
+      : (record.status === '접수' || record.status === '검토중');
+  const showReminderBtn = isStudent && isOwn && isPendingApproval;
+  const alreadyNotified = record.history.some((h) => h.step === '교수 승인 리마인더 발송');
+
+  const handleSendReminder = () => {
+    if (!user) return;
+    let domain: 'dept' | 'toeic' | 'volunteer' = 'dept';
+    if (record.programType === '토익') domain = 'toeic';
+    else if (record.programType === '전공연계봉사활동') domain = 'volunteer';
+
+    dispatch({
+      type: 'NOTIFY_PROFESSOR',
+      domain,
+      id: record.id,
+      actor: { name: user.name, role: user.role }
+    });
+    toast('담당 교수님께 승인 요청 알림 메일을 발송했습니다.', 'success');
+  };
+
   return (
-    <Modal open onClose={onClose} title={title} width="max-w-3xl">
+    <Modal
+      open
+      onClose={onClose}
+      title={title}
+      width="max-w-3xl"
+      footer={
+        <div className="flex justify-between w-full">
+          <div>
+            {showReminderBtn && (
+              <Button
+                variant={alreadyNotified ? 'secondary' : 'primary'}
+                disabled={alreadyNotified}
+                onClick={handleSendReminder}
+              >
+                {alreadyNotified ? '⏳ 리마인더 발송 완료' : '🔔 교수님께 승인 리마인더 발송'}
+              </Button>
+            )}
+          </div>
+          <Button variant="secondary" onClick={onClose}>
+            닫기
+          </Button>
+        </div>
+      }
+    >
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-3 text-sm">
           <DetailRow k="학생" v={`${record.name} (${record.studentId}) · ${record.grade}`} />

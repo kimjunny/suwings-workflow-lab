@@ -70,6 +70,7 @@ export type Action =
   | { type: 'RESUBMIT_VOLUNTEER'; id: string; actor: Actor }
   | { type: 'SET_ADMIN_COMMENT'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; comment: string; actor: Actor }
   | { type: 'SET_DOCUMENT_STATUS'; domain: 'dept' | 'volunteer'; id: string; kind: 'application' | 'result'; actor: Actor }
+  | { type: 'NOTIFY_PROFESSOR'; domain: 'dept' | 'toeic' | 'volunteer'; id: string; actor: Actor }
   | { type: 'MARK_NOTIFICATIONS_READ' }
   | { type: 'RESET' };
 
@@ -117,6 +118,21 @@ function programLabel(rec: AnyRecord): string {
 
 function reducer(state: RecordsState, action: Action): RecordsState {
   const next = coreReducer(state, action);
+  if (action.type === 'NOTIFY_PROFESSOR') {
+    const rec = findRecord(state, action.id);
+    if (rec) {
+      const notif: EmailNotification = {
+        id: nextNotifId(),
+        to: rec.studentId,
+        toName: rec.name,
+        subject: `[발송 완료] '${rec.professor}' 교수님께 승인 리마인더 메일이 전송되었습니다.`,
+        body: `'${rec.professor}' 교수님께 제출하신 '${programLabel(rec)}' 건에 대한 승인 검토 요청 메일이 자동 발송되었습니다.`,
+        createdAt: now(),
+        read: false,
+      };
+      return { ...next, notifications: [notif, ...next.notifications] };
+    }
+  }
   if ('id' in action && NOTIFY_ACTIONS.has(action.type)) {
     const before = findRecord(state, action.id);
     const after = findRecord(next, action.id);
@@ -142,6 +158,21 @@ function reducer(state: RecordsState, action: Action): RecordsState {
 
 function coreReducer(state: RecordsState, action: Action): RecordsState {
   switch (action.type) {
+    case 'NOTIFY_PROFESSOR': {
+      const touchRecord = <T extends { history: HistoryEntry[]; lastUpdate: string }>(r: T): T => ({
+        ...r,
+        lastUpdate: now(),
+        history: [...r.history, entry('교수 승인 리마인더 발송', action.actor)]
+      });
+      if (action.domain === 'dept') {
+        return mutDept(state, action.id, touchRecord);
+      } else if (action.domain === 'toeic') {
+        return mutToeic(state, action.id, touchRecord);
+      } else if (action.domain === 'volunteer') {
+        return mutVol(state, action.id, touchRecord);
+      }
+      return state;
+    }
     case 'CREATE_DEPT': {
       const rec: DeptProgramRecord = {
         ...action.payload,
