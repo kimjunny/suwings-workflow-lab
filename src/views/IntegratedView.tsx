@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useRecords } from '../store/recordsStore';
 import { useAuth } from '../auth/AuthContext';
 import { canView } from '../auth/roles';
-import { AnyRecord, ProgramType } from '../types';
+import { AnyRecord, ProgramType, User } from '../types';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -179,6 +179,213 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
     </button>
   );
 }
+function GraduationCalculator({ user }: { user: User }) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
+
+  const studentId = user?.studentId;
+  const grade = user?.grade;
+
+  // 입학/졸업 연도 및 날짜 계산 (약학대학 6년제 기준)
+  const currentYear = now.getFullYear();
+  let startYear = currentYear - 2; // 기본값: 3학년 가정 (2024년 입학)
+
+  if (studentId && studentId.length >= 4) {
+    const parsed = parseInt(studentId.slice(0, 4), 10);
+    if (!isNaN(parsed) && parsed > 1900 && parsed < 2100) {
+      startYear = parsed;
+    }
+  } else if (grade) {
+    const match = grade.match(/(\d)학년/);
+    if (match) {
+      const g = parseInt(match[1], 10);
+      startYear = currentYear - (g - 1);
+    }
+  }
+
+  const admissionDate = new Date(startYear, 2, 2, 0, 0, 0); // 3월 2일
+  const graduationDate = new Date(startYear + 6, 1, 28, 23, 59, 59); // 약대 6년제: 6년 뒤 2월 28일
+
+  const totalMs = graduationDate.getTime() - admissionDate.getTime();
+  const elapsedMs = now.getTime() - admissionDate.getTime();
+  const remainingMs = graduationDate.getTime() - now.getTime();
+
+  const isGraduated = remainingMs <= 0;
+  const percent = isGraduated ? 100 : Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
+
+  const totalDays = Math.round(totalMs / (1000 * 60 * 60 * 24));
+  const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+
+  // 약대 6년제 학년별 상태 이름 (학생 맞춤형 호칭)
+  let academicStatus = '약대생';
+  if (isGraduated) {
+    academicStatus = '약사님';
+  } else if (grade) {
+    if (grade.includes('1학년')) academicStatus = '새내기';
+    else if (grade.includes('2학년')) academicStatus = '헌내기';
+    else if (grade.includes('3학년')) academicStatus = '사망년';
+    else if (grade.includes('4학년')) academicStatus = '고인물';
+    else if (grade.includes('5학년')) academicStatus = '예비실습생';
+    else if (grade.includes('6학년')) academicStatus = '국시생';
+    else academicStatus = '화석';
+  } else {
+    const diffYears = now.getFullYear() - startYear;
+    if (diffYears === 0) academicStatus = '새내기';
+    else if (diffYears === 1) academicStatus = '헌내기';
+    else if (diffYears === 2) academicStatus = '사망년';
+    else if (diffYears === 3) academicStatus = '고인물';
+    else if (diffYears === 4) academicStatus = '예비실습생';
+    else if (diffYears === 5) academicStatus = '국시생';
+    else academicStatus = '화석';
+  }
+
+  // 개월차 계산
+  const month = now.getMonth() + 1;
+  const monthsElapsed = month >= 3 ? month - 2 : month + 10;
+
+  // 카운트다운 계산
+  const diff = Math.max(0, remainingMs);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  // 약대생 학년별 메시지 및 이모지
+  let statusEmoji = '🐻';
+  let speechBubble = '';
+  if (isGraduated) {
+    statusEmoji = '🎓🐻✨';
+    speechBubble = '빛나는 졸업과 약사 면허 취득을 진심으로 축하합니다! 자랑스러운 삼육대 출신 약사로서 세상을 따뜻하게 치유해주세요! 🎉';
+  } else {
+    switch (academicStatus) {
+      case '새내기':
+        statusEmoji = '🐣👶';
+        speechBubble = '풋풋한 약대 새내기(1학년) 시절! 대학 생활 로망은 가슴에 품고, 기초 과목 공부와 비교과도 틈틈이 챙겨보세요! 🏃';
+        break;
+      case '헌내기':
+        statusEmoji = '✏️👦';
+        speechBubble = '전공 진입을 앞두고 긴장되는 헌내기(2학년)... 본격적인 약학 전공의 맛을 보며 한 걸음 더 성장해 봅시다! 🔥';
+        break;
+      case '사망년':
+        statusEmoji = '🔥💪';
+        speechBubble = '과제와 시험의 늪, 마의 3학년! 약대 전공 공부가 무척 매워지는 시기지만, 비교과 이수도 착실히 챙기며 힘내세요! ⚡';
+        break;
+      case '고인물':
+        statusEmoji = '🎒🍀';
+        speechBubble = '어느덧 든든한 약대 고학번(4학년) 선배님! 심화 전공 지식을 탄탄히 다지며 실습 전 전공 기초를 다잡을 때입니다. 📚';
+        break;
+      case '예비실습생':
+        statusEmoji = '🩺🐻';
+        speechBubble = '약무 실습을 코앞에 둔 5학년! 실제 현장으로 나아가 임상 약학을 몸소 배울 소중한 기회를 멋지게 준비해봐요! ✨';
+        break;
+      case '국시생':
+        statusEmoji = '👑🩺';
+        speechBubble = '대망의 약사 국가고시 준비생(6학년)! 졸업 자격 요건을 완비하고, 국시 합격을 향해 후회 없는 마지막 스퍼트를 올리세요! 🏁';
+        break;
+      default:
+        statusEmoji = '🦖🕵️‍♂️';
+        speechBubble = '삼육대 약학대학의 살아있는 역사, 화석 선배님! 배움을 멈추지 않는 그대의 뜨거운 열정에 깊은 경의를 표합니다. 🦕';
+        break;
+    }
+  }
+
+  const formatNum = (num: number) => String(num).padStart(2, '0');
+
+  return (
+    <div className="bg-slate-50 border border-[#a6b9d0] rounded p-4 mb-3 select-none flex flex-col md:flex-row gap-4 items-center">
+      {/* 캐릭터 및 말풍선 영역 */}
+      <div className="flex items-center gap-3 w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-200 pb-3 md:pb-0 md:pr-4">
+        <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-full w-14 h-14 shadow-inner text-xl">
+          {statusEmoji}
+        </div>
+        <div className="flex-1 bg-white border border-slate-200 rounded p-2 relative min-h-[50px] flex flex-col justify-center">
+          <div className="absolute left-[-5px] top-1/2 translate-y-[-5px] w-2 h-2 bg-white border-l border-b border-slate-200 rotate-45 hidden md:block"></div>
+          <div className="absolute top-[-5px] left-6 w-2 h-2 bg-white border-t border-l border-slate-200 rotate-45 block md:hidden"></div>
+          <div className="font-bold text-[#1b3c67] text-[10px] mb-0.5">
+            {isGraduated ? '삼육이 (졸업생)' : `삼육이 (${academicStatus} ${monthsElapsed}개월차)`}
+          </div>
+          <p className="text-[10px] text-slate-600 leading-normal">
+            {speechBubble}
+          </p>
+        </div>
+      </div>
+
+      {/* 실시간 계산기 메인 영역 */}
+      <div className="flex-1 w-full">
+        <div className="flex justify-between items-baseline mb-1">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 mr-2">졸업구분</span>
+            <span className="text-xs font-black text-slate-800">
+              {isGraduated ? '학업 완료 (졸업)' : `D-${days}`}
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-slate-500 mr-1.5">진행률</span>
+            <span className="text-[13px] font-black text-[#1b3c67] font-mono">
+              {percent.toFixed(5)}%
+            </span>
+          </div>
+        </div>
+
+        {/* 프로그레스 바 */}
+        <div className="w-full bg-slate-200 rounded h-3 relative mb-2 border border-slate-300 shadow-inner">
+          <div
+            className="bg-gradient-to-r from-blue-500 to-[#1b3c67] h-full rounded transition-all duration-75"
+            style={{ width: `${percent}%` }}
+          />
+          {/* 게이지 끝 학사모 포인터 - 부모 기준 left 위치 지정 */}
+          {percent > 2 && percent < 98 && (
+            <span
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-[11px] pointer-events-none transition-all duration-75"
+              style={{ left: `${percent}%` }}
+            >
+              🎓
+            </span>
+          )}
+        </div>
+
+        {/* 상세 일정 정보 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9px] text-slate-600 bg-white p-1.5 border border-slate-200 rounded">
+          <div>
+            <span className="font-bold block text-slate-400">입학일</span>
+            <span className="font-mono">{startYear}.03.02</span>
+          </div>
+          <div>
+            <span className="font-bold block text-slate-400">졸업예정일</span>
+            <span className="font-mono">{startYear + 6}.02.28</span>
+          </div>
+          <div>
+            <span className="font-bold block text-slate-400">총 재학일수</span>
+            <span>{totalDays}일</span>
+          </div>
+          <div>
+            <span className="font-bold block text-slate-400">경과/남은일수</span>
+            <span>
+              {elapsedDays}일 / <span className="text-rose-600 font-bold">{isGraduated ? '0' : remainingDays}일</span>
+            </span>
+          </div>
+        </div>
+
+        {/* 남은 시간 카운터 (실시간) */}
+        {!isGraduated && (
+          <div className="mt-1 text-right text-[9px] text-slate-500 font-mono">
+            ⏱ 남은 시간: <span className="font-bold text-slate-700">{days}</span>일{' '}
+            <span className="font-bold text-slate-700">{formatNum(hours)}</span>시간{' '}
+            <span className="font-bold text-slate-700">{formatNum(minutes)}</span>분{' '}
+            <span className="font-bold text-[#1b3c67]">{formatNum(seconds)}</span>초
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function IntegratedView() {
   const { state } = useRecords();
@@ -281,6 +488,7 @@ export default function IntegratedView() {
           <button onClick={reset} className="su-btn-gray px-3 py-0.5 text-[11px]">초기화</button>
         </div>
       </div>
+      {isStudent && user && <GraduationCalculator user={user} />}
 
       {/* SU-WINGs 연청색 격자형 조회 조건 테이블 */}
       <div className="border border-[#a6b9d0] mb-3">
