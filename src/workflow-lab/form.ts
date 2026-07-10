@@ -102,7 +102,7 @@ function renderForm(vm: FormVM, hl: 'plan-tab' | 'report-tab' | 'download' | nul
   if (vm.payload) {
     children.push(
       el('div', { className: 'mt-4 border-2 border-slate-800 bg-[#0f172a] p-4' }, [
-        el('div', { className: 'mb-2 text-xs font-black text-[#e2e8f0]', text: '최근 HWPX 변환 payload (시뮬레이션)' }),
+        el('div', { className: 'mb-2 text-xs font-black text-[#e2e8f0]', text: '최근 HWPX 변환 정보 (시뮬레이션)' }),
         el('pre', { className: 'overflow-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-[#e2e8f0] font-mono', text: vm.payload }),
       ]),
     );
@@ -119,7 +119,7 @@ const makePayload = (s: FormVM): FormVM => {
     preset: spec.preset,
     markdown: formToMarkdown(spec, s.values),
   };
-  return { ...s, payload: JSON.stringify(payload, null, 2), message: `${spec.title} payload를 준비했습니다. 서버(kordoc)에서 HWPX로 생성됩니다.` };
+  return { ...s, payload: JSON.stringify(payload, null, 2), message: `${spec.title} 변환 정보를 준비했습니다. 서버(kordoc)에서 HWPX로 생성됩니다.` };
 };
 
 const steps: DeckStep<FormVM>[] = [
@@ -141,8 +141,8 @@ const steps: DeckStep<FormVM>[] = [
   {
     actor: 'STUDENT',
     menu: '양식 작성 (HWP)',
-    caption: 'HWP 다운로드 payload 준비',
-    note: '[HWP 다운로드]를 누르면 filename·preset·markdown payload가 준비됩니다. 실제 서비스에서는 이 payload가 서버(kordoc)로 전달되어 한컴 공문서 HWPX로 생성됩니다.',
+    caption: 'HWP 다운로드 정보 준비',
+    note: '[HWP 다운로드]를 누르면 파일명·양식·Markdown 변환 정보가 준비됩니다. 실제 서비스에서는 이 정보가 서버(kordoc)로 전달되어 한컴 공문서 HWPX로 생성됩니다.',
     mutate: makePayload,
     render: (s) => renderForm(s, 'download'),
   },

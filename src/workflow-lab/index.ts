@@ -26,7 +26,7 @@ const CARDS: Card[] = [
   {
     href: './form.html',
     title: '④ 양식 작성 (HWP)',
-    desc: '실제 FORM_SPECS/formToMarkdown 을 그대로 재사용해 계획서·결과보고서 탭 입력과 Markdown 미리보기, HWPX 변환 payload를 확인합니다.',
+    desc: '실제 FORM_SPECS/formToMarkdown 을 그대로 재사용해 계획서·결과보고서 탭 입력과 Markdown 미리보기, HWPX 변환 정보를 확인합니다.',
   },
 ];
 
